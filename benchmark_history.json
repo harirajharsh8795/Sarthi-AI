@@ -1,0 +1,23 @@
+[
+  {
+    "timestamp": "2026-06-27 18:52:11",
+    "metrics": {
+      "ocr_time_ms": 110.0,
+      "embedding_time_ms": 75.0,
+      "retrieval_time_ms": 32.0,
+      "ranking_time_ms": 12.0,
+      "inference_time_ms": 1780.0,
+      "streaming_time_ms": 840.0,
+      "total_response_time_ms": 2849.0
+    },
+    "comparison_vs_previous": {
+      "ocr_time_ms": "0.0%",
+      "embedding_time_ms": "0.0%",
+      "retrieval_time_ms": "0.0%",
+      "ranking_time_ms": "0.0%",
+      "inference_time_ms": "0.0%",
+      "streaming_time_ms": "0.0%",
+      "total_response_time_ms": "0.0%"
+    }
+  }
+]

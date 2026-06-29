@@ -1,0 +1,978 @@
+{
+  "bukhar": [
+    "fever",
+    "pyrexia",
+    "febrile"
+  ],
+  "bhukhar": [
+    "fever",
+    "pyrexia",
+    "febrile",
+    "high temperature"
+  ],
+  "bukhaar": [
+    "fever",
+    "pyrexia",
+    "febrile"
+  ],
+  "jwar": [
+    "fever",
+    "pyrexia"
+  ],
+  "बुखार": [
+    "fever",
+    "pyrexia"
+  ],
+  "ज्वर": [
+    "fever",
+    "pyrexia"
+  ],
+  "pet dard": [
+    "abdominal pain",
+    "stomach ache",
+    "gastric spasm"
+  ],
+  "petdard": [
+    "abdominal pain",
+    "stomach ache",
+    "gastric spasm"
+  ],
+  "udar shool": [
+    "abdominal pain"
+  ],
+  "पेट दर्द": [
+    "abdominal pain",
+    "stomach ache"
+  ],
+  "उदर शूल": [
+    "abdominal pain"
+  ],
+  "sir dard": [
+    "headache",
+    "migraine",
+    "cephalalgia"
+  ],
+  "sar dard": [
+    "headache",
+    "migraine",
+    "cephalalgia"
+  ],
+  "sardard": [
+    "headache",
+    "migraine",
+    "cephalalgia"
+  ],
+  "sirdard": [
+    "headache",
+    "migraine",
+    "cephalalgia"
+  ],
+  "shirovedna": [
+    "headache"
+  ],
+  "सिर दर्द": [
+    "headache",
+    "migraine"
+  ],
+  "सर दर्द": [
+    "headache",
+    "migraine"
+  ],
+  "ulti": [
+    "vomiting",
+    "emesis",
+    "nausea"
+  ],
+  "vamana": [
+    "vomiting",
+    "emesis"
+  ],
+  "उल्टी": [
+    "vomiting",
+    "emesis",
+    "nausea"
+  ],
+  "वमन": [
+    "vomiting",
+    "emesis"
+  ],
+  "khansi": [
+    "cough",
+    "coughing"
+  ],
+  "khasi": [
+    "cough",
+    "tussis"
+  ],
+  "खांसी": [
+    "cough",
+    "tussis"
+  ],
+  "खासी": [
+    "cough"
+  ],
+  "saans phulna": [
+    "breathlessness",
+    "shortness of breath",
+    "dyspnea",
+    "respiratory distress"
+  ],
+  "dum phulna": [
+    "breathlessness",
+    "shortness of breath",
+    "dyspnea"
+  ],
+  "सांस फूलना": [
+    "breathlessness",
+    "shortness of breath",
+    "dyspnea"
+  ],
+  "दम फूलना": [
+    "breathlessness",
+    "shortness of breath",
+    "dyspnea"
+  ],
+  "chakkar": [
+    "dizziness",
+    "vertigo",
+    "lightheadedness"
+  ],
+  "chakkar aana": [
+    "dizziness",
+    "vertigo",
+    "lightheadedness"
+  ],
+  "चक्कर": [
+    "dizziness",
+    "vertigo",
+    "lightheadedness"
+  ],
+  "चक्कर आना": [
+    "dizziness",
+    "vertigo",
+    "lightheadedness"
+  ],
+  "kamzori": [
+    "weakness",
+    "fatigue",
+    "anemia"
+  ],
+  "thakan": [
+    "fatigue",
+    "lassitude",
+    "lethargy"
+  ],
+  "कमजोरी": [
+    "weakness",
+    "fatigue",
+    "asthenia"
+  ],
+  "थकान": [
+    "fatigue",
+    "lethargy"
+  ],
+  "jodo me dard": [
+    "joint pain",
+    "arthralgia",
+    "arthritis"
+  ],
+  "jodon ka dard": [
+    "joint pain",
+    "arthralgia",
+    "arthritis"
+  ],
+  "जोड़ों में दर्द": [
+    "joint pain",
+    "arthralgia",
+    "arthritis"
+  ],
+  "khoon ki kami": [
+    "anemia",
+    "low hemoglobin",
+    "anaemia"
+  ],
+  "khoon kam hona": [
+    "anemia",
+    "low hemoglobin"
+  ],
+  "खून की कमी": [
+    "anemia",
+    "low hemoglobin",
+    "anaemia"
+  ],
+  "sugar ki bimari": [
+    "diabetes mellitus",
+    "type 2 diabetes"
+  ],
+  "sugar": [
+    "diabetes",
+    "blood sugar",
+    "hyperglycemia"
+  ],
+  "madhumeh": [
+    "diabetes",
+    "diabetes mellitus"
+  ],
+  "शुगर": [
+    "diabetes",
+    "hyperglycemia"
+  ],
+  "मधुमेह": [
+    "diabetes",
+    "diabetes mellitus"
+  ],
+  "BP ki problem": [
+    "hypertension",
+    "high blood pressure",
+    "blood pressure issue"
+  ],
+  "blood pressure": [
+    "hypertension",
+    "high blood pressure",
+    "hypotension"
+  ],
+  "raktachaap": [
+    "blood pressure",
+    "hypertension"
+  ],
+  "बीपी": [
+    "hypertension",
+    "high blood pressure",
+    "blood pressure issue"
+  ],
+  "रक्तचाप": [
+    "blood pressure",
+    "hypertension"
+  ],
+  "dast": [
+    "diarrhea",
+    "loose motions",
+    "gastroenteritis"
+  ],
+  "dust": [
+    "diarrhea",
+    "loose motions"
+  ],
+  "patla latrine": [
+    "diarrhea",
+    "loose motions"
+  ],
+  "दस्त": [
+    "diarrhea",
+    "loose motions",
+    "diarrhoea"
+  ],
+  "kabz": [
+    "constipation",
+    "irregular bowel movements"
+  ],
+  "kabziyat": [
+    "constipation"
+  ],
+  "कब्ज": [
+    "constipation"
+  ],
+  "कब्जियत": [
+    "constipation"
+  ],
+  "gale me kharas": [
+    "sore throat",
+    "pharyngitis",
+    "throat irritation"
+  ],
+  "gala kharab": [
+    "sore throat",
+    "throat infection"
+  ],
+  "गले में खराश": [
+    "sore throat",
+    "pharyngitis"
+  ],
+  "गला खराब": [
+    "sore throat",
+    "throat infection"
+  ],
+  "zukham": [
+    "common cold",
+    "coryza",
+    "runny nose",
+    "rhinitis"
+  ],
+  "sardi": [
+    "common cold",
+    "chills",
+    "coryza"
+  ],
+  "nazla": [
+    "common cold",
+    "coryza"
+  ],
+  "जुकाम": [
+    "common cold",
+    "coryza",
+    "runny nose"
+  ],
+  "सर्दी": [
+    "common cold",
+    "chills",
+    "coryza"
+  ],
+  "sine me dard": [
+    "chest pain",
+    "angina",
+    "thoracic pain",
+    "cardiac discomfort"
+  ],
+  "chaati me dard": [
+    "chest pain",
+    "angina"
+  ],
+  "सीने में दर्द": [
+    "chest pain",
+    "angina",
+    "thoracic pain"
+  ],
+  "छाती में दर्द": [
+    "chest pain",
+    "angina"
+  ],
+  "dhadkan": [
+    "palpitations",
+    "tachycardia",
+    "heart racing"
+  ],
+  "dil ki dhadkan": [
+    "palpitations",
+    "tachycardia"
+  ],
+  "धड़कन": [
+    "palpitations",
+    "tachycardia"
+  ],
+  "दिल की धड़कन": [
+    "palpitations",
+    "tachycardia"
+  ],
+  "jalan": [
+    "heartburn",
+    "acid reflux",
+    "burning sensation",
+    "dyspepsia"
+  ],
+  "acidity": [
+    "heartburn",
+    "acid reflux",
+    "gerd"
+  ],
+  "acid ki dikkat": [
+    "heartburn",
+    "acid reflux",
+    "gerd"
+  ],
+  "जलन": [
+    "heartburn",
+    "burning sensation",
+    "dyspepsia"
+  ],
+  "एसिडिटी": [
+    "heartburn",
+    "acid reflux",
+    "gerd"
+  ],
+  "pet kharab": [
+    "indigestion",
+    "dyspepsia",
+    "upset stomach"
+  ],
+  "pacharn": [
+    "indigestion",
+    "dyspepsia"
+  ],
+  "पेट खराब": [
+    "indigestion",
+    "dyspepsia",
+    "upset stomach"
+  ],
+  "khujli": [
+    "itching",
+    "pruritus",
+    "skin irritation"
+  ],
+  "khujli hona": [
+    "itching",
+    "pruritus"
+  ],
+  "खुजली": [
+    "itching",
+    "pruritus",
+    "skin irritation"
+  ],
+  "daane": [
+    "skin rash",
+    "eruptions",
+    "dermatitis"
+  ],
+  "rash": [
+    "skin rash",
+    "dermatitis",
+    "erythema"
+  ],
+  "दाने": [
+    "skin rash",
+    "eruptions"
+  ],
+  "soojan": [
+    "swelling",
+    "edema",
+    "inflammation"
+  ],
+  "sujan": [
+    "swelling",
+    "edema",
+    "inflammation"
+  ],
+  "सूजन": [
+    "swelling",
+    "edema",
+    "inflammation"
+  ],
+  "ghabrahat": [
+    "anxiety",
+    "restlessness",
+    "palpitations",
+    "panic"
+  ],
+  "bechaini": [
+    "anxiety",
+    "restlessness",
+    "agitation"
+  ],
+  "घबराहट": [
+    "anxiety",
+    "restlessness",
+    "palpitations"
+  ],
+  "बेचैनी": [
+    "anxiety",
+    "restlessness"
+  ],
+  "peeliya": [
+    "jaundice",
+    "icterus",
+    "hepatitis"
+  ],
+  "pila peshab": [
+    "jaundice",
+    "yellow urine"
+  ],
+  "पीलिया": [
+    "jaundice",
+    "icterus",
+    "hepatitis"
+  ],
+  "kammar dard": [
+    "back pain",
+    "backache",
+    "lumbago"
+  ],
+  "peeth dard": [
+    "back pain",
+    "backache"
+  ],
+  "कमर दर्द": [
+    "back pain",
+    "backache",
+    "lumbago"
+  ],
+  "पीठ दर्द": [
+    "back pain",
+    "backache"
+  ],
+  "gardan me dard": [
+    "neck pain",
+    "cervical pain",
+    "cervical spondylosis"
+  ],
+  "गर्दन में दर्द": [
+    "neck pain",
+    "cervical pain"
+  ],
+  "daant dard": [
+    "toothache",
+    "dental pain"
+  ],
+  "daant me dard": [
+    "toothache",
+    "dental pain"
+  ],
+  "दांत दर्द": [
+    "toothache",
+    "dental pain"
+  ],
+  "kaan me dard": [
+    "earache",
+    "otalgia",
+    "otitis media"
+  ],
+  "कान में दर्द": [
+    "earache",
+    "otalgia"
+  ],
+  "aankh lal hona": [
+    "conjunctivitis",
+    "pink eye",
+    "eye redness",
+    "ocular hyperemia"
+  ],
+  "आंँख लाल होना": [
+    "conjunctivitis",
+    "pink eye",
+    "eye redness"
+  ],
+  "balgam": [
+    "sputum",
+    "phlegm",
+    "mucus",
+    "cough with phlegm"
+  ],
+  "kaph": [
+    "sputum",
+    "phlegm",
+    "mucus"
+  ],
+  "बलगम": [
+    "sputum",
+    "phlegm"
+  ],
+  "कफ": [
+    "sputum",
+    "phlegm"
+  ],
+  "pet me gas": [
+    "flatulence",
+    "bloating",
+    "abdominal distension"
+  ],
+  "bloating": [
+    "flatulence",
+    "bloating",
+    "abdominal distension"
+  ],
+  "पेट में गैस": [
+    "flatulence",
+    "bloating"
+  ],
+  "bhookh na lagna": [
+    "loss of appetite",
+    "anorexia",
+    "poor appetite"
+  ],
+  "भूख न लगना": [
+    "loss of appetite",
+    "anorexia"
+  ],
+  "peshab me jalan": [
+    "dysuria",
+    "burning micturition",
+    "urinary tract infection",
+    "uti"
+  ],
+  "पेशाब में जलन": [
+    "dysuria",
+    "burning micturition",
+    "urinary tract infection",
+    "uti"
+  ],
+  "baar baar peshab aana": [
+    "frequent urination",
+    "polyuria",
+    "pollakiuria"
+  ],
+  "बार बार पेशाब आना": [
+    "frequent urination",
+    "polyuria"
+  ],
+  "neend na aana": [
+    "insomnia",
+    "sleeplessness",
+    "sleep disturbance"
+  ],
+  "नींद न आना": [
+    "insomnia",
+    "sleeplessness"
+  ],
+  "behoshi": [
+    "fainting",
+    "syncope",
+    "unconsciousness",
+    "blackout"
+  ],
+  "बेहोशी": [
+    "fainting",
+    "syncope",
+    "unconsciousness"
+  ],
+  "khoon behna": [
+    "bleeding",
+    "hemorrhage",
+    "bleeding episode"
+  ],
+  "खून बहना": [
+    "bleeding",
+    "hemorrhage"
+  ],
+  "chot": [
+    "injury",
+    "wound",
+    "trauma",
+    "laceration"
+  ],
+  "zakhm": [
+    "wound",
+    "injury",
+    "ulcer"
+  ],
+  "चोट": [
+    "injury",
+    "wound",
+    "trauma"
+  ],
+  "ज़ख्म": [
+    "wound",
+    "injury"
+  ],
+  "moch": [
+    "sprain",
+    "strain",
+    "ligament injury"
+  ],
+  "मोच": [
+    "sprain",
+    "strain"
+  ],
+  "haddi tootna": [
+    "fracture",
+    "broken bone",
+    "bone fracture"
+  ],
+  "हड्डी टूटना": [
+    "fracture",
+    "broken bone"
+  ],
+  "lakwa": [
+    "paralysis",
+    "stroke",
+    "hemiplegia",
+    "facial palsy"
+  ],
+  "falij": [
+    "paralysis",
+    "stroke"
+  ],
+  "लकवा": [
+    "paralysis",
+    "stroke",
+    "hemiplegia"
+  ],
+  "mirgi": [
+    "epilepsy",
+    "seizure",
+    "convulsions"
+  ],
+  "daura": [
+    "seizure",
+    "convulsions",
+    "fit"
+  ],
+  "मिर्गी": [
+    "epilepsy",
+    "seizure"
+  ],
+  "दौरा": [
+    "seizure",
+    "convulsions"
+  ],
+  "gathiya": [
+    "rheumatoid arthritis",
+    "gout",
+    "joint inflammation",
+    "arthritis"
+  ],
+  "गठिया": [
+    "rheumatoid arthritis",
+    "gout",
+    "arthritis"
+  ],
+  "dama": [
+    "asthma",
+    "bronchial asthma",
+    "chronic obstructive pulmonary disease",
+    "copd"
+  ],
+  "asthma": [
+    "asthma",
+    "bronchospasm"
+  ],
+  "दमा": [
+    "asthma",
+    "bronchial asthma"
+  ],
+  "thandi lagna": [
+    "chills",
+    "shivering",
+    "rigors"
+  ],
+  "ठंडी लगना": [
+    "chills",
+    "shivering"
+  ],
+  "pasina aana": [
+    "sweating",
+    "diaphoresis",
+    "excessive sweating"
+  ],
+  "पसीना आना": [
+    "sweating",
+    "diaphoresis"
+  ],
+  "muh ke chale": [
+    "mouth ulcers",
+    "aphthous stomatitis",
+    "oral ulcers"
+  ],
+  "मुंह के छाले": [
+    "mouth ulcers",
+    "aphthous stomatitis"
+  ],
+  "gale me sujan": [
+    "tonsillitis",
+    "throat swelling",
+    "pharyngitis"
+  ],
+  "गले में सूजन": [
+    "tonsillitis",
+    "throat swelling"
+  ],
+  "khoon ki ulti": [
+    "hematemesis",
+    "vomiting blood"
+  ],
+  "खून की उल्टी": [
+    "hematemesis",
+    "vomiting blood"
+  ],
+  "latrine me khoon": [
+    "hematochezia",
+    "blood in stool",
+    "rectal bleeding"
+  ],
+  "papees me khoon": [
+    "blood in stool"
+  ],
+  "मल में खून": [
+    "blood in stool",
+    "hematochezia"
+  ],
+  "peshab me khoon": [
+    "hematuria",
+    "blood in urine"
+  ],
+  "पेशाब में खून": [
+    "hematuria",
+    "blood in urine"
+  ],
+  "bawasir": [
+    "hemorrhoids",
+    "piles"
+  ],
+  "बवासीर": [
+    "hemorrhoids",
+    "piles"
+  ],
+  "pathri": [
+    "kidney stones",
+    "renal calculi",
+    "gallstones",
+    "cholelithiasis"
+  ],
+  "पथरी": [
+    "kidney stones",
+    "renal calculi",
+    "gallstones"
+  ],
+  "dad": [
+    "ringworm",
+    "fungal infection",
+    "tinea"
+  ],
+  "दाद": [
+    "ringworm",
+    "fungal infection"
+  ],
+  "sunn hona": [
+    "numbness",
+    "paresthesia",
+    "loss of sensation"
+  ],
+  "sunnipan": [
+    "numbness",
+    "neuropathy"
+  ],
+  "सुन्न होना": [
+    "numbness",
+    "paresthesia"
+  ],
+  "blood sugar": [
+    "glucose levels",
+    "glycemia"
+  ],
+  "khoon me sugar": [
+    "blood glucose",
+    "glycemia"
+  ],
+  "खून में शुगर": [
+    "blood glucose"
+  ],
+  "tapman": [
+    "fever",
+    "body temperature",
+    "high temperature"
+  ],
+  "thand lagti hai": [
+    "chills",
+    "rigors",
+    "shivering"
+  ],
+  "garmi lagti hai": [
+    "fever",
+    "body heat",
+    "high temperature"
+  ],
+  "BP": [
+    "blood pressure",
+    "hypertension",
+    "BP problem"
+  ],
+  "BP high hai": [
+    "hypertension",
+    "high blood pressure"
+  ],
+  "BP low hai": [
+    "hypotension",
+    "low blood pressure"
+  ],
+  "dil ki bimari": [
+    "heart disease",
+    "cardiac disease",
+    "cardiovascular disease"
+  ],
+  "sans phulna": [
+    "breathlessness",
+    "shortness of breath",
+    "dyspnea"
+  ],
+  "seene me dard": [
+    "chest pain",
+    "angina",
+    "cardiac pain"
+  ],
+  "loose motion": [
+    "diarrhea",
+    "gastroenteritis"
+  ],
+  "ulti dast": [
+    "vomiting and diarrhea",
+    "gastroenteritis",
+    "food poisoning"
+  ],
+  "khun aana": [
+    "blood in",
+    "bleeding",
+    "hemorrhage"
+  ],
+  "thakaan": [
+    "fatigue",
+    "weakness",
+    "tiredness"
+  ],
+  "pagalpan": [
+    "mental illness",
+    "psychiatric disorder",
+    "psychosis"
+  ],
+  "TB": [
+    "tuberculosis",
+    "TB disease",
+    "kshayrog"
+  ],
+  "malaria": [
+    "malaria",
+    "malarial fever",
+    "falciparum malaria"
+  ],
+  "dengue": [
+    "dengue fever",
+    "dengue",
+    "platelet count low"
+  ],
+  "typhoid": [
+    "typhoid",
+    "enteric fever",
+    "typhoid fever"
+  ],
+  "motiyabind": [
+    "cataract",
+    "typhoid"
+  ],
+  "dawa": [
+    "medicine",
+    "medication",
+    "drug",
+    "tablet"
+  ],
+  "dawai": [
+    "medicine",
+    "medication",
+    "drug"
+  ],
+  "ilaj": [
+    "treatment",
+    "therapy",
+    "cure"
+  ],
+  "doctor": [
+    "physician",
+    "doctor",
+    "medical officer"
+  ],
+  "hospital": [
+    "hospital",
+    "medical facility",
+    "healthcare center"
+  ],
+  "FIR": [
+    "First Information Report",
+    "FIR",
+    "police complaint"
+  ],
+  "bail": [
+    "bail",
+    "anticipatory bail",
+    "judicial custody"
+  ],
+  "zameen vivad": [
+    "land dispute",
+    "property dispute",
+    "land conflict"
+  ],
+  "kiraya": [
+    "rent",
+    "rental agreement",
+    "tenancy"
+  ],
+  "loan nahi bhar paya": [
+    "loan default",
+    "EMI default",
+    "debt recovery"
+  ]
+}
