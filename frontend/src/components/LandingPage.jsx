@@ -160,7 +160,7 @@ export default function LandingPage({ onLaunch }) {
           {/* Action Buttons */}
           <div className="flex items-center space-x-4">
             <a
-              href="https://github.com"
+              href="https://github.com/harirajharsh8795/Sarthi-AI.git"
               target="_blank"
               rel="noreferrer"
               className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white rounded-lg border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] transition flex items-center space-x-1.5 cursor-pointer"
@@ -227,7 +227,7 @@ export default function LandingPage({ onLaunch }) {
               <ArrowRight className="w-4 h-4" />
             </button>
             <a
-              href="https://github.com"
+              href="https://github.com/harirajharsh8795/Sarthi-AI.git"
               target="_blank"
               rel="noreferrer"
               className="px-6 py-3 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-slate-350 hover:text-white font-bold text-sm tracking-wide transition flex items-center space-x-2 cursor-pointer"
@@ -942,7 +942,7 @@ export default function LandingPage({ onLaunch }) {
           {/* Col 4 */}
           <div className="flex flex-col space-y-3">
             <span className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">Resources</span>
-            <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-purple-400 transition-colors flex items-center space-x-1">
+            <a href="https://github.com/harirajharsh8795/Sarthi-AI.git" target="_blank" rel="noreferrer" className="hover:text-purple-400 transition-colors flex items-center space-x-1">
               <GithubIcon className="w-3.5 h-3.5" />
               <span>GitHub Repository</span>
             </a>

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { 
   Edit3, Trash2, RotateCw, Copy, Check, FileText, ThumbsUp, ThumbsDown, Volume2, Square,
-  CheckCircle2, AlertTriangle, AlertCircle
+  CheckCircle2, AlertTriangle, AlertCircle, Brain
 } from "lucide-react";
 import { translations } from "../../utils/localization";
 
@@ -255,7 +255,7 @@ export default function MessageBubble({
           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 shadow-md select-none"
           style={{ background: "var(--accent-gradient)", color: "white" }}
         >
-          <span className="text-[11px] font-bold">सा</span>
+          <Brain className="w-4 h-4 text-white" />
         </div>
       )}
 

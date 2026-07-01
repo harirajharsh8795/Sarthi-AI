@@ -841,8 +841,8 @@ def alias_get_job_status(job_id: str):
     return get_job_status(job_id)
 
 @app.get("/api/stream")
-def alias_generate_stream(query: str, session_id: str, conversation_id: Optional[str] = None, response_language: Optional[str] = None):
-    return generate_stream(query, session_id, conversation_id, response_language)
+def alias_generate_stream(request: Request, query: str, session_id: str, conversation_id: Optional[str] = None, response_language: Optional[str] = None):
+    return generate_stream(request, query, session_id, conversation_id, response_language)
 
 @app.get("/api/history")
 def alias_get_session_history(session_id: str, conversation_id: Optional[str] = None):
