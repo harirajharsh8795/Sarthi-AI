@@ -259,16 +259,17 @@ export default function MessageBubble({
         </div>
       )}
 
-      {/* Bubble Shell */}
       <div
         className={`relative ${
           isUser
             ? "px-4 py-3 text-xs rounded-2xl rounded-tr-none text-left shadow-md max-w-[70%]"
+            : message.role === "error"
+            ? "px-4 py-3 text-xs rounded-2xl rounded-tl-none text-left bg-red-500/10 border border-red-500/30 text-red-400 max-w-[85%]"
             : "text-left pr-2 max-w-[calc(100%-44px)] flex-1"
         }`}
         style={{
-          background: isUser ? "var(--user-bubble-bg)" : "transparent",
-          color: isUser ? "white" : "var(--text-primary)",
+          background: isUser ? "var(--user-bubble-bg)" : message.role === "error" ? undefined : "transparent",
+          color: isUser ? "white" : message.role === "error" ? undefined : "var(--text-primary)",
         }}
       >
         {isEditing ? (

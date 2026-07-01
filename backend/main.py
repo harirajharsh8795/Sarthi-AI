@@ -77,6 +77,8 @@ class SpeakRequest(BaseModel):
 async def lifespan(app: FastAPI):
     # Startup check validation
     run_environment_checks()
+    # Call whisper and DB initialization
+    preload_whisper()
     yield
     # Shutdown resource release
     logger.info("Initiating graceful shutdown sequence...")
@@ -216,9 +218,16 @@ def preload_whisper():
     logger.info("Pre-loading Whisper base model...")
     try:
         whisper_model = whisper.load_model("base")
-        logger.info("Whisper base model loaded.")
+        logger.info("Whisper loaded OK")
     except Exception as e:
-        logger.error(f"Error preloading Whisper model: {e}")
+        logger.error(f"WARNING: Whisper failed: {e}")
+        whisper_model = None
+        
+    try:
+        session_manager.init_session_db()
+        print("Database initialized")
+    except Exception as e:
+        logger.error(f"Error initializing session DB: {e}")
 
     # Preload LLM model asynchronously to not block startup checks
     from model_manager import model_lifecycle_manager
@@ -500,7 +509,7 @@ def get_telemetry():
 @v1_router.post("/voice/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
     if whisper_model is None:
-        raise SaarthiError("SAARTHI_WHISPER_DOWN", "Whisper model not initialized.", 503)
+        return JSONResponse({"success": False, "error": "Voice input is not available. Please type your question instead."}, status_code=200)
     
     os.makedirs(settings.TEMP_DIR, exist_ok=True)
     temp_file = tempfile.NamedTemporaryFile(suffix=".webm", dir=settings.TEMP_DIR, delete=False)

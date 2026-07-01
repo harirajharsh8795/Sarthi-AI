@@ -49,6 +49,7 @@ export default function ChatWorkspace({
   const eventSourceRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const textareaRef = useRef(null);
 
   // Check scroll position to show/hide floating bottom button
   const handleScroll = (e) => {
@@ -234,8 +235,20 @@ export default function ChatWorkspace({
         } else if (data.type === "done") {
           accumulatedLanguage = data.data.response_language || "English";
         } else if (data.type === "error") {
-          accumulatedText = `[Error: ${data.data.message}]`;
-          setCurrentStreamText(accumulatedText);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "error",
+              content: data.data.message + "\n\n" + (data.data.detail || ""),
+            },
+          ]);
+          eventSource.close();
+          eventSourceRef.current = null;
+          setCurrentStreamText("");
+          setStreamCitations([]);
+          setIsStreaming(false);
+          onMessageSent?.();
+          return;
         }
       } catch (err) {
         console.error("SSE JSON parse error:", err);

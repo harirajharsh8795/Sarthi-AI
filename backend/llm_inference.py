@@ -25,7 +25,15 @@ from followup_service import followup_service
 OLLAMA_URL = settings.OLLAMA_URL
 MODEL_NAME = settings.LLM_MODEL_NAME
 
-def generate_answer_stream(
+def generate_answer_stream(query: str, session_id: str | None, response_language: str | None = None, conversation_id: str | None = None) -> Generator[dict, None, None]:
+    try:
+        yield from _generate_answer_stream_inner(query, session_id, response_language, conversation_id)
+    except Exception as e:
+        import traceback
+        yield {"type": "error", "data": {"message": str(e), "detail": traceback.format_exc()}}
+        return
+
+def _generate_answer_stream_inner(
     query: str, 
     session_id: str | None, 
     response_language: str | None = None, 
