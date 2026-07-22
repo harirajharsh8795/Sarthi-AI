@@ -4,6 +4,15 @@ from config import settings
 
 logger = logging.getLogger("saarthi.validation")
 
+STOPWORDS = {
+    "kya", "hai", "me", "mein", "se", "ko", "ne", "par", "pe", "ka", "ki", "ke", "jo", "aur", "ya", "toh", "tha", "thi", "the",
+    "what", "how", "why", "who", "where", "when", "which", "is", "are", "am", "was", "were", "be", "been", "being", "have", "has", "had",
+    "do", "does", "did", "a", "an", "the", "and", "or", "but", "if", "then", "else", "of", "at", "by", "for", "with", "about", "against",
+    "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off",
+    "over", "under", "again", "further", "then", "once", "here", "there", "all", "any", "both", "each", "few", "more", "most", "other",
+    "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "should", "now"
+}
+
 class ValidationService:
     """
     Implements a sentence-level Citation Validator and an AI Self-Evaluation checker.
@@ -29,74 +38,96 @@ class ValidationService:
                 keywords.add(t_clean.lower())
         return keywords
 
-    def validate_citations(self, answer: str, chunks: list) -> dict:
+    def validate_citations(self, answer: str, chunks: list, query: str = None) -> dict:
         """
         Citation Validator: Parses sentences and checks if assertions are supported by source chunks.
         If a sentence cites e.g. [1], it checks chunk 1 text specifically.
+        Preserves the original markdown structure of the answer.
         Returns: {
             "validated_answer": str,
             "grounding_score": float,
             "unsupported_sentences": list
         }
         """
-        sentences = self.split_into_sentences(answer)
+        # Split into sentences for grounding analysis, but keep the original text intact
+        sentences = re.split(r'(?<=[.!?])\s+', answer.replace('\n', ' __NL__ '))
+        sentences = [s.strip() for s in sentences if s.strip()]
         if not sentences:
-            return {"validated_answer": answer, "grounding_score": 1.0, "unsupported_sentences": []}
+            return {"validated_text": answer, "validated_answer": answer, "grounding_score": 1.0, "unsupported_sentences": []}
 
-        validated_sentences = []
         unsupported = []
         supported_count = 0
 
+        # Extract query keywords
+        query_words = set()
+        if query:
+            tokens = re.findall(r'\b\w+\b', query.lower())
+            query_words = {t for t in tokens if len(t) >= 3 and t not in STOPWORDS}
+
         # Map chunks by index
         chunk_map = {}
+        chunk_words_map = {}
         for c in chunks:
             idx = c.get("index") or c.get("citation_indices", [1])[0]
-            chunk_map[idx] = c["text"]
+            chunk_text = c["text"]
+            chunk_map[idx] = chunk_text
+            chunk_words_map[idx] = {t.lower() for t in re.findall(r'\b\w+\b', chunk_text.lower())}
 
+        validated_sentences = []
         for s in sentences:
-            # Skip signature blocks
-            if s.startswith("Sources:") or s.startswith("[") and ":" in s:
+            clean_s = s.replace(' __NL__ ', ' ')
+            if clean_s.startswith("Sources:") or clean_s.startswith("[") and ":" in clean_s:
+                supported_count += 1
                 validated_sentences.append(s)
                 continue
                 
-            # Extract citations: e.g. [1], [2]
-            citations = [int(n) for n in re.findall(r'\[(\d+)\]', s)]
-            
+            citations = [int(n) for n in re.findall(r'\[(\d+)\]', clean_s)]
+            sentence_words = {t.lower() for t in re.findall(r'\b\w+\b', clean_s.lower())}
             is_supported = False
             
             if citations:
-                # Check cited chunks specifically
                 for cit in citations:
                     if cit in chunk_map:
                         chunk_text = chunk_map[cit]
-                        overlap = self.extract_nouns_and_numbers(s).intersection(self.extract_nouns_and_numbers(chunk_text))
-                        # If we have keyword overlap, it is grounded
+                        chunk_words = chunk_words_map[cit]
+                        
+                        # Strict Query-Keyword match
+                        query_words_in_sentence = query_words.intersection(sentence_words)
+                        query_words_not_in_chunk = query_words_in_sentence.difference(chunk_words)
+                        if len(query_words_not_in_chunk) > 0:
+                            continue
+                            
+                        overlap = self.extract_nouns_and_numbers(clean_s).intersection(self.extract_nouns_and_numbers(chunk_text))
                         if len(overlap) >= 1 or len(chunk_text) < 50:
                             is_supported = True
                             break
             else:
-                # No citations: Check overlap against ALL chunks
                 for idx, chunk_text in chunk_map.items():
-                    overlap = self.extract_nouns_and_numbers(s).intersection(self.extract_nouns_and_numbers(chunk_text))
+                    chunk_words = chunk_words_map[idx]
+                    
+                    query_words_in_sentence = query_words.intersection(sentence_words)
+                    query_words_not_in_chunk = query_words_in_sentence.difference(chunk_words)
+                    if len(query_words_not_in_chunk) > 0:
+                        continue
+                        
+                    overlap = self.extract_nouns_and_numbers(clean_s).intersection(self.extract_nouns_and_numbers(chunk_text))
                     if len(overlap) >= 2:
                         is_supported = True
                         break
 
-            if is_supported or len(s.split()) <= 3:
-                # Sentence is grounded, keep it
+            if is_supported or len(clean_s.split()) <= 3:
                 supported_count += 1
                 validated_sentences.append(s)
             else:
-                # Unsupported claim
-                unsupported.append(s)
-                # We append a warning tag instead of completely deleting, to preserve layout
-                validated_sentences.append(f"{s} [⚠️ Claim Unsupported by Sources]")
+                unsupported.append(clean_s)
+                validated_sentences.append(s)
 
+        validated_answer = " ".join(validated_sentences).replace(' __NL__ ', '\n')
         grounding_score = supported_count / len(sentences) if sentences else 1.0
-        validated_answer = " ".join(validated_sentences)
         
         logger.info(f"Citation validation complete. Grounding score={grounding_score:.2f}")
         return {
+            "validated_text": validated_answer,
             "validated_answer": validated_answer,
             "grounding_score": round(grounding_score, 4),
             "unsupported_sentences": unsupported

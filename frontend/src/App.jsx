@@ -12,7 +12,7 @@ import { translations } from "./utils/localization";
 const API_BASE = "http://localhost:8000";
 
 export default function App() {
-  const [view, setView] = useState("landing");
+  const [view, setView] = useState("app");
   const [masterSessionId, setMasterSessionId] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
@@ -23,6 +23,7 @@ export default function App() {
   const [selectedCitation, setSelectedCitation] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
+  const [newChatTrigger, setNewChatTrigger] = useState(0);
 
   // Theme & Language states
   const { theme, toggleTheme } = useTheme();
@@ -52,13 +53,16 @@ export default function App() {
     }
   };
 
-  const fetchConversations = async (mSessionId) => {
+  const fetchConversations = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/conversations?session_id=${mSessionId}`);
+      const deviceId = localStorage.getItem("saarthi_device_id");
+      if (!deviceId) return [];
+      const response = await fetch(`${API_BASE}/api/conversations/all?device_id=${deviceId}`);
       if (response.ok) {
         const data = await response.json();
-        setConversations(data.conversations || []);
-        return data.conversations || [];
+        const convs = data.conversations || [];
+        setConversations(convs);
+        return convs;
       }
     } catch (err) {
       console.error("Failed to fetch conversations:", err);
@@ -82,6 +86,12 @@ export default function App() {
   // Initialize master session and active thread
   useEffect(() => {
     const initializeApp = async () => {
+      let deviceId = localStorage.getItem("saarthi_device_id");
+      if (!deviceId) {
+        deviceId = `dev_${Math.random().toString(36).substring(2, 15)}`;
+        localStorage.setItem("saarthi_device_id", deviceId);
+      }
+
       let storedMasterSession = localStorage.getItem("saarthi_master_session_id");
       if (!storedMasterSession) {
         storedMasterSession = `usr_${Math.random().toString(36).substring(2, 10)}`;
@@ -90,10 +100,12 @@ export default function App() {
       setMasterSessionId(storedMasterSession);
 
       // Fetch conversations list
-      const list = await fetchConversations(storedMasterSession);
+      const list = await fetchConversations();
       
       let storedActiveConv = localStorage.getItem("saarthi_active_conversation_id");
-      if (storedActiveConv && list.some(c => c.id === storedActiveConv)) {
+      if (storedActiveConv === "new") {
+        setActiveConversationId("new");
+      } else if (storedActiveConv && list.some(c => c.id === storedActiveConv)) {
         setActiveConversationId(storedActiveConv);
         loadMessages(storedActiveConv);
       } else if (list.length > 0) {
@@ -102,8 +114,8 @@ export default function App() {
         localStorage.setItem("saarthi_active_conversation_id", recentConvId);
         loadMessages(recentConvId);
       } else {
-        // Create initial default chat thread
-        await createInitialConversation(storedMasterSession);
+        setActiveConversationId("new");
+        localStorage.setItem("saarthi_active_conversation_id", "new");
       }
       setAppLoading(false);
     };
@@ -114,7 +126,11 @@ export default function App() {
   // Update documents list on session/conversation/refresh switch
   useEffect(() => {
     if (masterSessionId && activeConversationId) {
-      fetchDocuments(masterSessionId, activeConversationId);
+      if (activeConversationId === "new") {
+        setDocumentsList([]);
+      } else {
+        fetchDocuments(masterSessionId, activeConversationId);
+      }
     }
   }, [masterSessionId, activeConversationId, refreshList]);
 
@@ -130,25 +146,7 @@ export default function App() {
     }
   };
 
-  const createInitialConversation = async (session_id) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/conversations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id, title: "Welcome Thread" }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const newConvId = data.conversation_id;
-        setActiveConversationId(newConvId);
-        localStorage.setItem("saarthi_active_conversation_id", newConvId);
-        setMessages([]);
-        fetchConversations(session_id);
-      }
-    } catch (err) {
-      console.error("Failed to create initial conversation:", err);
-    }
-  };
+
 
   const handleConversationClick = async (convId) => {
     setActiveConversationId(convId);
@@ -159,28 +157,13 @@ export default function App() {
     loadMessages(convId);
   };
 
-  const handleNewChat = async () => {
-    if (!masterSessionId) return;
-    try {
-      const response = await fetch(`${API_BASE}/api/conversations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: masterSessionId, title: "New Conversation" }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const newConvId = data.conversation_id;
-        setActiveConversationId(newConvId);
-        localStorage.setItem("saarthi_active_conversation_id", newConvId);
-        setMessages([]);
-        setIsDrawerOpen(false);
-        setSelectedCitation(null);
-        setRefreshList(prev => !prev);
-        fetchConversations(masterSessionId);
-      }
-    } catch (err) {
-      console.error("Failed to create new conversation:", err);
-    }
+  const handleNewChat = () => {
+    setActiveConversationId("new");
+    localStorage.setItem("saarthi_active_conversation_id", "new");
+    setIsDrawerOpen(false);
+    setSelectedCitation(null);
+    setMessages([]); // Clear messages for a new chat
+    setNewChatTrigger(prev => prev + 1);
   };
 
   const handleRenameConversation = async (convId, newTitle) => {
@@ -191,7 +174,7 @@ export default function App() {
         body: JSON.stringify({ title: newTitle }),
       });
       if (response.ok) {
-        fetchConversations(masterSessionId);
+        fetchConversations();
       }
     } catch (err) {
       console.error("Failed to rename conversation:", err);
@@ -204,7 +187,7 @@ export default function App() {
         method: "DELETE",
       });
       if (response.ok) {
-        const updatedList = await fetchConversations(masterSessionId);
+        const updatedList = await fetchConversations();
         if (activeConversationId === convId) {
           if (updatedList.length > 0) {
             const nextConvId = updatedList[0].id;
@@ -212,14 +195,29 @@ export default function App() {
             localStorage.setItem("saarthi_active_conversation_id", nextConvId);
             loadMessages(nextConvId);
           } else {
-            // Re-create a default one if completely empty
-            createInitialConversation(masterSessionId);
+            setActiveConversationId("new");
+            localStorage.setItem("saarthi_active_conversation_id", "new");
+            setMessages([]);
           }
         }
         setRefreshList(prev => !prev);
       }
     } catch (err) {
       console.error("Failed to delete conversation:", err);
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    if (!masterSessionId) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/document/${docId}?session_id=${masterSessionId}`, {
+        method: "DELETE"
+      });
+      if (response.ok) {
+        setRefreshList(prev => !prev);
+      }
+    } catch (err) {
+      console.error("Failed to delete document:", err);
     }
   };
 
@@ -310,6 +308,13 @@ export default function App() {
           conversations={conversations}
           onRenameConversation={handleRenameConversation}
           documentsList={documentsList}
+          onDeleteDocument={handleDeleteDocument}
+          onConversationCreated={(newId) => {
+            setActiveConversationId(newId);
+            localStorage.setItem("saarthi_active_conversation_id", newId);
+            fetchConversations();
+          }}
+          newChatTrigger={newChatTrigger}
         />
       </main>
 

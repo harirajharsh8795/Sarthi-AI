@@ -2,6 +2,7 @@ import os
 import re
 import time
 import sqlite3
+import logging
 import urllib.parse
 import requests
 from tqdm import tqdm
@@ -52,7 +53,7 @@ def init_directories():
     os.makedirs(SQLITE_DIR, exist_ok=True)
     os.makedirs(CHROMA_DIR, exist_ok=True)
     os.makedirs("./glossary", exist_ok=True)
-    print("Folder structure initialized successfully.")
+    logger.debug("Folder structure initialized successfully.")
 
 import db_manager
 
@@ -81,7 +82,7 @@ def init_db():
     """)
     conn.commit()
     conn.close()
-    print("SQLite database and kb_documents table initialized.")
+    logger.debug("SQLite database and kb_documents table initialized.")
 
 def get_document_by_url(url):
     """Retrieves a document record from SQLite by source_url."""
@@ -179,12 +180,12 @@ def download_file(url, save_path, unstable=False):
     
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"Downloading {url} (Attempt {attempt}/{max_retries})...")
+            logger.debug(f"Downloading {url} (Attempt {attempt}/{max_retries})...")
             response = requests.get(url, headers=headers, stream=True, timeout=30)
             
             # Check response code
             if response.status_code != 200:
-                print(f"Failed with HTTP Status {response.status_code}")
+                logger.debug(f"Failed with HTTP Status {response.status_code}")
                 time.sleep(backoff_factor ** attempt)
                 continue
                 
@@ -193,7 +194,7 @@ def download_file(url, save_path, unstable=False):
             if "application/pdf" not in content_type:
                 # If content-type is missing or unexpected, but it's marked unstable or looks HTML-ish
                 if unstable or "text/html" in content_type:
-                    print(f"Warning: URL did not resolve to a PDF. Content-Type is '{content_type}'. Skipping.")
+                    logger.debug(f"Warning: URL did not resolve to a PDF. Content-Type is '{content_type}'. Skipping.")
                     return False
             
             # Save the file
@@ -207,15 +208,15 @@ def download_file(url, save_path, unstable=False):
             if os.path.exists(save_path):
                 os.remove(save_path)
             os.rename(temp_path, save_path)
-            print(f"Successfully downloaded and saved to {save_path}")
+            logger.debug(f"Successfully downloaded and saved to {save_path}")
             return True
             
         except Exception as e:
-            print(f"Error on attempt {attempt}: {e}")
+            logger.debug(f"Error on attempt {attempt}: {e}")
             if attempt < max_retries:
                 time.sleep(backoff_factor ** attempt)
             else:
-                print("Max retries exceeded.")
+                logger.debug("Max retries exceeded.")
                 
     return False
 
@@ -260,7 +261,7 @@ def extract_text_and_language(pdf_path, expected_lang):
     if detected_lang != expected_lang and expected_lang in ["hi", "en"]:
         # If detected is 'hi' but expected is 'en' (or vice versa), log warning
         # Sometimes small snippets or numbers make langdetect predict wrong, but let's log warning
-        print(f"Warning: Language mismatch for {os.path.basename(pdf_path)}. Expected '{expected_lang}', detected '{detected_lang}'.")
+        logger.debug(f"Warning: Language mismatch for {os.path.basename(pdf_path)}. Expected '{expected_lang}', detected '{detected_lang}'.")
         
     return pages_text, detected_lang
 
@@ -311,14 +312,14 @@ def index_document(domain, language, filename, source_url, discovered_via, file_
     Returns (page_count, chunk_count, status).
     """
     try:
-        print(f"Processing PDF for indexing: {filename}...")
+        logger.debug(f"Processing PDF for indexing: {filename}...")
         
         # 1. Extract text and language
         pages_text, detected_lang = extract_text_and_language(file_path, language)
         page_count = len(pages_text)
         
         if page_count == 0:
-            print(f"Skipping empty or unreadable PDF: {filename}")
+            logger.debug(f"Skipping empty or unreadable PDF: {filename}")
             upsert_document_record(
                 domain=domain, language=language, filename=filename, source_url=source_url,
                 discovered_via=discovered_via, status="failed", page_count=0, chunk_count=0
@@ -328,10 +329,10 @@ def index_document(domain, language, filename, source_url, discovered_via, file_
         # 2. Chunk text
         chunks = chunk_text(pages_text)
         chunk_count = len(chunks)
-        print(f"Extracted {page_count} pages and created {chunk_count} chunks.")
+        logger.debug(f"Extracted {page_count} pages and created {chunk_count} chunks.")
         
         if chunk_count == 0:
-            print(f"No text chunks created for {filename}.")
+            logger.debug(f"No text chunks created for {filename}.")
             upsert_document_record(
                 domain=domain, language=language, filename=filename, source_url=source_url,
                 discovered_via=discovered_via, status="failed", page_count=page_count, chunk_count=0
@@ -348,11 +349,15 @@ def index_document(domain, language, filename, source_url, discovered_via, file_
         
         ids = []
         metadatas = []
+        import numpy as np
         
         for idx, chunk in enumerate(chunks):
             # Stable deterministic ID
             chunk_id = f"{filename}_p{chunk['page_number']}_c{chunk['chunk_index']}"
             ids.append(chunk_id)
+            
+            # Calculate embedding norm
+            emb_norm = float(np.linalg.norm(embeddings[idx]))
             
             # Metadata structure
             meta = {
@@ -362,7 +367,8 @@ def index_document(domain, language, filename, source_url, discovered_via, file_
                 "source_url": source_url,
                 "page_number": chunk["page_number"],
                 "chunk_index": chunk["chunk_index"],
-                "discovered_via": discovered_via
+                "discovered_via": discovered_via,
+                "vector_norm": emb_norm
             }
             metadatas.append(meta)
             
@@ -372,7 +378,7 @@ def index_document(domain, language, filename, source_url, discovered_via, file_
             metadatas=metadatas,
             documents=texts
         )
-        print(f"Upserted {chunk_count} chunks into ChromaDB.")
+        logger.debug(f"Upserted {chunk_count} chunks into ChromaDB.")
         
         # 5. Update SQLite document record
         now_str = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -384,7 +390,7 @@ def index_document(domain, language, filename, source_url, discovered_via, file_
         return page_count, chunk_count, "indexed"
         
     except Exception as e:
-        print(f"Error indexing document {filename}: {e}")
+        logger.debug(f"Error indexing document {filename}: {e}")
         upsert_document_record(
             domain=domain, language=language, filename=filename, source_url=source_url,
             discovered_via=discovered_via, status="failed"
@@ -456,11 +462,11 @@ def extract_text_from_image_ocr(image_path):
     try:
         data = pytesseract.image_to_data(binarized, lang="eng+hin", output_type=pytesseract.Output.DICT)
     except Exception as e:
-        print(f"Warning: OCR with 'eng+hin' failed ({e}). Falling back to 'eng'.")
+        logger.debug(f"Warning: OCR with 'eng+hin' failed ({e}). Falling back to 'eng'.")
         try:
             data = pytesseract.image_to_data(binarized, lang="eng", output_type=pytesseract.Output.DICT)
         except Exception as ex:
-            print(f"Error: OCR failed ({ex})")
+            logger.debug(f"Error: OCR failed ({ex})")
             
     # Reconstruct text and calculate mean confidence
     text = ""
@@ -490,11 +496,24 @@ def extract_text_from_image_ocr(image_path):
         if confidences:
             mean_conf = sum(confidences) / len(confidences)
             
+    # Fallback to direct OCR on original image if binarization produced sparse/empty text (< 30 chars)
+    if len(text.strip()) < 30:
+        try:
+            raw_text = pytesseract.image_to_string(img, lang="eng+hin")
+            if not raw_text.strip():
+                raw_text = pytesseract.image_to_string(img, lang="eng")
+            if len(raw_text.strip()) > len(text.strip()):
+                text = raw_text.strip()
+                mean_conf = 75.0
+        except Exception as ex:
+            logger.debug(f"Direct image OCR fallback failed: {ex}")
+
     return text, mean_conf
 
 import hashlib
 from metrics_manager import metrics_manager
 from job_queue import job_queue
+from logger_config import logger
 
 def calculate_file_hash(file_path: str) -> str:
     """Computes MD5 hash of a file for duplicate upload checking."""
@@ -535,6 +554,42 @@ def ingest_user_document_task(
         start_extract = time.perf_counter()
         if ext == ".pdf":
             pages_text, detected_lang = extract_text_and_language(file_path, "unknown")
+            has_text = any(t.strip() for _, t in pages_text)
+            
+            if not has_text:
+                logger.info(f"No text extracted via fitz for {file_path}. Falling back to OCR...")
+                ocr_used = True
+                
+                doc = fitz.open(file_path)
+                pages_text = []
+                confidences = []
+                
+                for i, page in enumerate(doc):
+                    pix = page.get_pixmap(dpi=150)
+                    temp_img_path = f"{file_path}_page_{i}.png"
+                    pix.save(temp_img_path)
+                    
+                    try:
+                        text, conf = extract_text_from_image_ocr(temp_img_path)
+                        from ocr_sanitizer import ocr_sanitizer
+                        text = ocr_sanitizer.sanitize_ocr_text(text)
+                        
+                        pages_text.append((i + 1, text))
+                        if conf > 0:
+                            confidences.append(conf)
+                    finally:
+                        if os.path.exists(temp_img_path):
+                            try:
+                                os.remove(temp_img_path)
+                            except:
+                                pass
+                
+                doc.close()
+                if confidences:
+                    ocr_conf = sum(confidences) / len(confidences)
+                else:
+                    ocr_conf = 0.0
+                    
         elif ext == ".docx":
             text = extract_text_from_docx(file_path)
             pages_text = [(1, text)]
@@ -591,10 +646,15 @@ def ingest_user_document_task(
         collection = get_user_docs_collection()
         ids = []
         metadatas = []
+        import numpy as np
         
         for idx, chunk in enumerate(chunks):
             chunk_id = f"{session_id}_{document_id}_p{chunk['page_number']}_c{chunk['chunk_index']}"
             ids.append(chunk_id)
+            
+            # Calculate embedding norm
+            emb_norm = float(np.linalg.norm(embeddings[idx]))
+            
             meta = {
                 "session_id": session_id,
                 "conversation_id": conversation_id or "",
@@ -603,7 +663,8 @@ def ingest_user_document_task(
                 "file_type": ext,
                 "page_number": chunk["page_number"],
                 "chunk_index": chunk["chunk_index"],
-                "language": detected_lang
+                "language": detected_lang,
+                "vector_norm": emb_norm
             }
             if domain_hint:
                 meta["domain_hint"] = domain_hint
@@ -617,7 +678,7 @@ def ingest_user_document_task(
         )
         
         ocr_confidence = ocr_conf if ocr_used else None
-        ocr_low_quality_warning = (ocr_confidence < settings.OCR_LOW_CONFIDENCE_THRESHOLD) if ocr_used else False
+        ocr_low_quality_warning = (ocr_confidence < OCR_LOW_CONFIDENCE_THRESHOLD) if ocr_used else False
         
         # Step 5: Finalize status records
         session_manager.update_document_status(
@@ -639,7 +700,7 @@ def ingest_user_document_task(
         except NameError:
             current_ocr_conf = None
             
-        ocr_low_quality = (current_ocr_conf < settings.OCR_LOW_CONFIDENCE_THRESHOLD) if current_ocr_conf is not None else False
+        ocr_low_quality = (current_ocr_conf < OCR_LOW_CONFIDENCE_THRESHOLD) if current_ocr_conf is not None else False
         
         session_manager.update_document_status(
             document_id=document_id,
@@ -707,8 +768,8 @@ def delete_document_and_chunks(document_id, session_id):
     # Hard-delete chunks from ChromaDB
     collection = get_user_docs_collection()
     collection.delete(where={"document_id": document_id})
-    print(f"Hard-deleted chunks for document {document_id} from ChromaDB.")
+    logger.debug(f"Hard-deleted chunks for document {document_id} from ChromaDB.")
     
     # Soft-delete record in SQLite
     session_manager.delete_document_record(document_id, session_id)
-    print(f"Soft-deleted document record {document_id} in SQLite.")
+    logger.debug(f"Soft-deleted document record {document_id} in SQLite.")

@@ -18,8 +18,8 @@ class OutputValidator:
         if not raw_answer:
             return "I could not compile a grounded answer based on the retrieved sources."
 
-        # 1. Spacing normalizations
-        refined = post_processor.format_markdown(raw_answer)
+        # 1. Spacing normalizations - disabled to preserve exact markdown from stream
+        refined = raw_answer
         
         # 2. Check for citation spoofing (LLM citing numbers that don't exist in chunks)
         citations = [int(n) for n in re.findall(r'\[(\d+)\]', refined)]

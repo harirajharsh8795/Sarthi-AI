@@ -11,6 +11,7 @@ import whisper
 import pyttsx3
 import requests
 import subprocess
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
@@ -35,6 +36,7 @@ from prompt_guard import prompt_guard
 from file_security import file_security_validator
 from rate_limit import rate_limiter
 from audit_service import audit_trail_service
+from logger_config import logger
 
 logger = logging.getLogger("saarthi.api")
 
@@ -63,6 +65,7 @@ class SessionRequest(BaseModel):
 class ConversationCreate(BaseModel):
     session_id: str
     title: Optional[str] = "New Conversation"
+    device_id: Optional[str] = None
 
 class ConversationUpdate(BaseModel):
     title: str
@@ -215,9 +218,9 @@ def preload_whisper():
             os.environ["PATH"] = ffmpeg_dir + os.pathsep + os.environ["PATH"]
             logger.info(f"Added ffmpeg directory to PATH: {ffmpeg_dir}")
             
-    logger.info("Pre-loading Whisper base model...")
+    logger.info("Pre-loading Whisper tiny model...")
     try:
-        whisper_model = whisper.load_model("base")
+        whisper_model = whisper.load_model("tiny")
         logger.info("Whisper loaded OK")
     except Exception as e:
         logger.error(f"WARNING: Whisper failed: {e}")
@@ -225,14 +228,30 @@ def preload_whisper():
         
     try:
         session_manager.init_session_db()
-        print("Database initialized")
+        logger.debug("Database initialized")
     except Exception as e:
         logger.error(f"Error initializing session DB: {e}")
 
-    # Preload LLM model asynchronously to not block startup checks
-    from model_manager import model_lifecycle_manager
+    # Preload LLM and Embedding models asynchronously to not block startup checks
+    def warmup_models_task():
+        # 1. Warm up Ollama LLM
+        try:
+            from model_manager import model_lifecycle_manager
+            model_lifecycle_manager.warmup_model()
+        except Exception as e:
+            logger.error(f"Error pre-warming LLM: {e}")
+            
+        # 2. Warm up SentenceTransformer Embedding Model
+        try:
+            import kb_pipeline
+            logger.info("Pre-warming embedding model...")
+            kb_pipeline.get_embedding_model()
+            logger.info("Embedding model pre-warmed successfully.")
+        except Exception as e:
+            logger.error(f"Error pre-warming embedding model: {e}")
+
     import threading
-    threading.Thread(target=model_lifecycle_manager.warmup_model, daemon=True).start()
+    threading.Thread(target=warmup_models_task, daemon=True).start()
 
 
 # v1 ENDPOINTS
@@ -267,7 +286,7 @@ def upload_document(
     
     # 2. Validation checks
     ext = os.path.splitext(file.filename)[1].lower()
-    valid_extensions = {".pdf", ".docx", ".jpg", ".jpeg", ".png", ".webp"}
+    valid_extensions = {".pdf", ".docx", ".jpg", ".jpeg", ".png", ".webp", ".txt"}
     if ext not in valid_extensions:
         raise SaarthiError("SAARTHI_INVALID_FILE", f"Unsupported file extension: {ext}", 400)
 
@@ -445,8 +464,10 @@ def generate_stream(
             if conversation_id and active_streams.get(conversation_id) == asyncio.current_task():
                 del active_streams[conversation_id]
         except Exception as e:
-            logger.error(f"Stream generation error: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'data': {'message': 'Stream crashed.'}})}\n\n"
+            import traceback
+            logger.error(f"Stream generation error: {e}\n{traceback.format_exc()}")
+            error_msg = f"Something went wrong while generating the response.\n\nRequest ID: {req_id}"
+            yield f"data: {json.dumps({'type': 'error', 'data': {'message': error_msg}})}\n\n"
 
     return StreamingResponse(
         event_generator(), 
@@ -507,7 +528,7 @@ def get_telemetry():
         raise SaarthiError("SAARTHI_DB_ERROR", "Failed to retrieve telemetry logs.")
 
 @v1_router.post("/voice/transcribe")
-async def transcribe_audio(audio: UploadFile = File(...)):
+async def transcribe_audio(audio: UploadFile = File(...), lang: Optional[str] = Form(None)):
     if whisper_model is None:
         return JSONResponse({"success": False, "error": "Voice input is not available. Please type your question instead."}, status_code=200)
     
@@ -535,7 +556,11 @@ async def transcribe_audio(audio: UploadFile = File(...)):
                 
         loop = asyncio.get_event_loop()
         def run_whisper():
-            return whisper_model.transcribe(transcribe_target, language=None)
+            return whisper_model.transcribe(
+                transcribe_target,
+                fp16=False,
+                language=lang if lang in ["hi", "en"] else None
+            )
             
         result = await loop.run_in_executor(None, run_whisper)
         
@@ -599,11 +624,20 @@ async def speak_text(request: SpeakRequest, background_tasks: BackgroundTasks):
 def create_new_conversation(req: ConversationCreate):
     try:
         conversation_id = f"conv_{uuid.uuid4().hex[:8]}"
-        session_manager.create_conversation(conversation_id, req.session_id, req.title)
+        session_manager.create_conversation(conversation_id, req.session_id, req.title, getattr(req, 'device_id', None))
         return {"conversation_id": conversation_id}
     except Exception as e:
         logger.error(f"Error creating conversation: {e}")
         raise SaarthiError("SAARTHI_DB_ERROR", "Failed to create conversation.")
+
+@v1_router.get("/conversations/all")
+def get_all_conversations(device_id: str):
+    try:
+        conversations = session_manager.list_all_conversations(device_id)
+        return {"conversations": conversations}
+    except Exception as e:
+        logger.error(f"Error fetching all conversations: {e}")
+        raise SaarthiError("SAARTHI_DB_ERROR", "Failed to retrieve conversations.")
 
 @v1_router.get("/conversations")
 def get_conversations(session_id: str):
@@ -701,7 +735,8 @@ def health_check():
         # Check Ollama status
         ollama_status = "offline"
         try:
-            r = requests.get("http://localhost:11434/api/tags", timeout=1.5)
+            tags_url = settings.OLLAMA_URL.replace("/api/generate", "/api/tags")
+            r = requests.get(tags_url, timeout=1.5)
             if r.status_code == 200:
                 ollama_status = "ok"
         except Exception:
@@ -842,8 +877,8 @@ def alias_create_session(request: SessionRequest = SessionRequest()):
     return create_session(request)
 
 @app.post("/api/upload")
-def alias_upload_document(file: UploadFile = File(...), session_id: str = Form(...), conversation_id: Optional[str] = Form(None)):
-    return upload_document(file, session_id, conversation_id)
+def alias_upload_document(request: Request, file: UploadFile = File(...), session_id: str = Form(...), conversation_id: Optional[str] = Form(None)):
+    return upload_document(request, file, session_id, conversation_id)
 
 @app.get("/api/uploads/{job_id}")
 def alias_get_job_status(job_id: str):
@@ -862,8 +897,8 @@ def alias_get_telemetry():
     return get_telemetry()
 
 @app.post("/api/voice/transcribe")
-async def alias_transcribe_audio(audio: UploadFile = File(...)):
-    return await transcribe_audio(audio)
+async def alias_transcribe_audio(audio: UploadFile = File(...), lang: Optional[str] = Form(None)):
+    return await transcribe_audio(audio, lang)
 
 @app.post("/api/voice/speak")
 async def alias_speak_text(request: SpeakRequest, background_tasks: BackgroundTasks):
@@ -872,6 +907,10 @@ async def alias_speak_text(request: SpeakRequest, background_tasks: BackgroundTa
 @app.post("/api/conversations")
 def alias_create_new_conversation(req: ConversationCreate):
     return create_new_conversation(req)
+
+@app.get("/api/conversations/all")
+def alias_get_all_conversations(device_id: str):
+    return get_all_conversations(device_id)
 
 @app.get("/api/conversations")
 def alias_get_conversations(session_id: str):
@@ -895,7 +934,7 @@ def alias_delete_messages_from(conversation_id: str, message_id: str):
 
 @app.get("/api/search/messages")
 def alias_search_messages(session_id: str, q: str):
-    return alias_search_messages(session_id, q)
+    return search_messages(session_id, q)
 
 @app.delete("/api/document/{document_id}")
 def alias_delete_document(document_id: str, session_id: str):
@@ -971,3 +1010,8 @@ if os.path.exists(dist_dir):
         if os.path.exists(index_file):
             return FileResponse(index_file)
         return {"message": "Frontend build files found but index.html is missing."}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+

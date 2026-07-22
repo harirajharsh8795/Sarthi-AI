@@ -14,6 +14,13 @@ class RequestIdFilter(logging.Filter):
 
 def setup_logging():
     """Sets up rotated daily/sized logging for stdout and file handlers."""
+    import sys
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+
     os.makedirs(settings.LOGS_DIR, exist_ok=True)
     
     log_format = "[%(asctime)s] [%(levelname)s] [ReqID: %(request_id)s] [%(name)s] [%(threadName)s] %(message)s"

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowDown, Upload } from "lucide-react";
+import { ArrowDown, Upload, X } from "lucide-react";
 import ChatHeader from "./ChatHeader";
 import ChatMessages from "../chat/ChatMessages";
 import InputArea from "../chat/InputArea";
 import CameraModal from "../chat/CameraModal";
-import UploadTimeline from "../shared/UploadTimeline";
 import TypingIndicator from "../chat/TypingIndicator";
 import { translations } from "../../utils/localization";
 
@@ -21,7 +20,10 @@ export default function ChatWorkspace({
   language,
   conversations,
   onRenameConversation,
-  documentsList
+  documentsList,
+  onDeleteDocument,
+  onConversationCreated,
+  newChatTrigger
 }) {
   const t = translations[language] || translations.en;
   
@@ -31,6 +33,11 @@ export default function ChatWorkspace({
   const [streamCitations, setStreamCitations] = useState([]);
   
   const [attachedFile, setAttachedFile] = useState(null);
+  
+  const inputRef = useRef(input);
+  useEffect(() => { inputRef.current = input; }, [input]);
+  const attachedFileRef = useRef(attachedFile);
+  useEffect(() => { attachedFileRef.current = attachedFile; }, [attachedFile]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadStep, setUploadStep] = useState(0);
   const [uploadError, setUploadError] = useState(null);
@@ -46,7 +53,7 @@ export default function ChatWorkspace({
   const photoInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const eventSourceRef = useRef(null);
+  const activeStreamsRef = useRef({});
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const textareaRef = useRef(null);
@@ -70,8 +77,64 @@ export default function ChatWorkspace({
   }, [conversationId]);
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom("auto");
   }, [messages, currentStreamText]);
+
+  const prevConvIdRef = useRef(conversationId);
+  const draftsRef = useRef({});
+  const inTransitConvIdRef = useRef(null);
+
+  useEffect(() => {
+    if (newChatTrigger > 0) {
+      if (conversationId === "new") {
+        setInput("");
+        setAttachedFile(null);
+      }
+      draftsRef.current["new"] = { input: "", attachedFile: null };
+    }
+  }, [newChatTrigger, conversationId]);
+
+  // Reset local state on conversation change
+  useEffect(() => {
+    if (inTransitConvIdRef.current === conversationId) {
+      inTransitConvIdRef.current = null;
+      prevConvIdRef.current = conversationId;
+      return;
+    }
+
+    draftsRef.current[prevConvIdRef.current] = {
+      input: inputRef.current,
+      attachedFile: attachedFileRef.current
+    };
+
+    const savedDraft = draftsRef.current[conversationId] || { input: "", attachedFile: null };
+    setInput(savedDraft.input);
+    setAttachedFile(savedDraft.attachedFile);
+
+    setUploadStep(0);
+    setUploadError(null);
+    setInlineError(null);
+    setUploadingFile(false);
+    
+    // Check if there is an active background stream running for this conversation
+    const activeStream = activeStreamsRef.current[conversationId];
+    if (activeStream) {
+      setIsStreaming(true);
+      setCurrentStreamText(activeStream.accumulatedText);
+      setStreamCitations(activeStream.accumulatedCitations);
+    } else {
+      setIsStreaming(false);
+      setCurrentStreamText("");
+      setStreamCitations([]);
+    }
+    
+    setTranscribing(false);
+    setIsRecording(false);
+    
+    // Do NOT close eventSource here to allow background generation
+
+    prevConvIdRef.current = conversationId;
+  }, [conversationId]);
 
   // Drag and Drop handlers
   const handleDrag = (e) => {
@@ -94,7 +157,33 @@ export default function ChatWorkspace({
     }
   };
 
-  const validateAndSetFile = (file) => {
+  const ensureConversationExists = async (titleHint) => {
+    if (conversationId !== "new") return conversationId;
+    if (inTransitConvIdRef.current) return inTransitConvIdRef.current;
+    
+    const words = titleHint.trim().split(/\s+/);
+    const title = words.length > 0 ? words.slice(0, 6).join(" ") : "New Conversation";
+    
+    try {
+      const resp = await fetch(`${API_BASE}/api/conversations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, title: title, device_id: localStorage.getItem("saarthi_device_id") })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const newConvId = data.conversation_id;
+        inTransitConvIdRef.current = newConvId;
+        if (onConversationCreated) onConversationCreated(newConvId);
+        return newConvId;
+      }
+    } catch (e) {
+      console.error("Failed to lazily create chat:", e);
+    }
+    return null;
+  };
+
+  const validateAndSetFile = async (file) => {
     setInlineError(null);
     setUploadError(null);
     const maxSize = 15 * 1024 * 1024;
@@ -104,7 +193,7 @@ export default function ChatWorkspace({
     }
     
     // Extensions check
-    const validExtensions = [".pdf", ".docx", ".jpg", ".jpeg", ".png", ".webp"];
+    const validExtensions = [".pdf", ".docx", ".jpg", ".jpeg", ".png", ".webp", ".txt"];
     const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
     if (!validExtensions.includes(ext)) {
       setInlineError(`Unsupported file type. Allowed: ${validExtensions.join(", ")}`);
@@ -112,10 +201,16 @@ export default function ChatWorkspace({
     }
     
     setAttachedFile(file);
+    
+    // Start upload immediately
+    const targetConvId = await ensureConversationExists(file.name);
+    if (targetConvId) {
+      await uploadFile(file, targetConvId);
+    }
   };
 
   // Perform upload logic
-  const uploadFile = async (fileToUpload) => {
+  const uploadFile = async (fileToUpload, targetConvId) => {
     if (!fileToUpload) return false;
     
     setUploadingFile(true);
@@ -125,35 +220,48 @@ export default function ChatWorkspace({
     const formData = new FormData();
     formData.append("file", fileToUpload);
     formData.append("session_id", sessionId);
-    if (conversationId) {
-      formData.append("conversation_id", conversationId);
+    if (targetConvId && targetConvId !== "new") {
+      formData.append("conversation_id", targetConvId);
     }
 
     try {
-      // Simulate timelines (actual endpoint handles all in one go, so we transition gracefully)
-      const stepTimer = setInterval(() => {
-        setUploadStep((prev) => (prev < 3 ? prev + 1 : prev));
-      }, 1500);
-
       const response = await fetch(`${API_BASE}/api/upload`, {
         method: "POST",
         body: formData,
       });
 
-      clearInterval(stepTimer);
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.message || "File upload failed");
       }
 
+      if (result.job_id) {
+        let isDone = false;
+        while (!isDone) {
+          await new Promise(res => setTimeout(res, 1500));
+          const jobRes = await fetch(`${API_BASE}/api/uploads/${result.job_id}`);
+          if (jobRes.ok) {
+            const jobData = await jobRes.json();
+            if (jobData.status === "completed" || jobData.status === "indexed") {
+              isDone = true;
+              setUploadStep(4);
+            } else if (jobData.status === "failed") {
+              throw new Error(jobData.error_message || "Document processing failed");
+            } else {
+              const p = jobData.progress || 0;
+              if (p > 0 && p < 40) setUploadStep(1);
+              else if (p >= 40 && p < 60) setUploadStep(2);
+              else if (p >= 60) setUploadStep(3);
+            }
+          }
+        }
+      }
+
       setUploadStep(4); // Ready
-      setAttachedFile(null);
       
       // Delay success reset so timeline shows complete state briefly
       setTimeout(() => {
         setUploadingFile(false);
-        setUploadStep(0);
       }, 1000);
 
       onUploadSuccess?.();
@@ -162,6 +270,7 @@ export default function ChatWorkspace({
       console.error("Upload error:", err);
       setUploadError(err.message || "An error occurred during file upload.");
       setUploadStep(0);
+      setUploadingFile(false);
       return false;
     }
   };
@@ -171,15 +280,27 @@ export default function ChatWorkspace({
     if (isStreaming || uploadingFile || transcribing || isRecording) return;
     
     let currentInput = input;
+    if (!currentInput.trim() && !attachedFile) return;
+
     setInput("");
     
-    let hasUploaded = true;
+    const activeConvId = await ensureConversationExists(currentInput || "Document Question");
+    if (!activeConvId) return;
+
+    // Clear attached file now that we are sending the message
     if (attachedFile) {
-      hasUploaded = await uploadFile(attachedFile);
-      if (!hasUploaded) return; // Halt sending if upload failed
+      setAttachedFile(null);
+      setUploadStep(0);
     }
 
-    if (!currentInput.trim() && !attachedFile) return;
+    // Auto-rename if first message for existing blank conversations
+    if (messages.length === 0 && currentInput.trim() && activeConvId === conversationId && activeConvId !== "new") {
+      const words = currentInput.trim().split(/\s+/);
+      const newTitle = words.slice(0, 6).join(" ");
+      if (activeConvId && onRenameConversation) {
+        onRenameConversation(activeConvId, newTitle);
+      }
+    }
 
     // Add user message
     setMessages((prev) => [...prev, { role: "user", content: currentInput }]);
@@ -187,34 +308,39 @@ export default function ChatWorkspace({
     setCurrentStreamText("");
     setStreamCitations([]);
 
-    let accumulatedText = "";
-    let accumulatedCitations = [];
-    let accumulatedLanguage = "English";
-
-    // SSE Streaming
-    const url = `${API_BASE}/api/stream?query=${encodeURIComponent(currentInput)}&session_id=${sessionId}${
-      conversationId ? `&conversation_id=${conversationId}` : ""
-    }&response_language=${language === "en" ? "English" : "Hindi"}`;
+    const url = `${API_BASE}/api/stream?query=${encodeURIComponent(currentInput)}&session_id=${sessionId}&conversation_id=${activeConvId}`;
     
     const eventSource = new EventSource(url);
-    eventSourceRef.current = eventSource;
+
+    activeStreamsRef.current[activeConvId] = {
+      eventSource,
+      accumulatedText: "",
+      accumulatedCitations: [],
+      accumulatedLanguage: "English"
+    };
 
     eventSource.onmessage = (event) => {
+      const activeStream = activeStreamsRef.current[activeConvId];
+      if (!activeStream) return;
+
       if (event.data === "[DONE]") {
         eventSource.close();
-        eventSourceRef.current = null;
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: accumulatedText,
-            citations: accumulatedCitations,
-            response_language: accumulatedLanguage,
-          },
-        ]);
-        setCurrentStreamText("");
-        setStreamCitations([]);
-        setIsStreaming(false);
+        delete activeStreamsRef.current[activeConvId];
+        
+        if (activeConvId === prevConvIdRef.current) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: activeStream.accumulatedText,
+              citations: activeStream.accumulatedCitations,
+              response_language: activeStream.accumulatedLanguage,
+            },
+          ]);
+          setCurrentStreamText("");
+          setStreamCitations([]);
+          setIsStreaming(false);
+        }
         onMessageSent?.();
         return;
       }
@@ -222,31 +348,46 @@ export default function ChatWorkspace({
       try {
         const data = JSON.parse(event.data);
         if (data.skipped_llm) {
-          accumulatedText = data.answer;
-          accumulatedCitations = data.citations || [];
-          accumulatedLanguage = data.response_language || "English";
-          setCurrentStreamText(accumulatedText);
+          activeStream.accumulatedText = data.answer || "";
+          activeStream.accumulatedCitations = data.citations || [];
+          activeStream.accumulatedLanguage = data.response_language || "English";
+          if (activeConvId === prevConvIdRef.current) {
+            setCurrentStreamText(activeStream.accumulatedText);
+          }
         } else if (data.type === "token") {
-          accumulatedText += data.data.token;
-          setCurrentStreamText(accumulatedText);
+          activeStream.accumulatedText += data.data.token;
+          if (activeConvId === prevConvIdRef.current) {
+            setCurrentStreamText(activeStream.accumulatedText);
+          }
         } else if (data.type === "citation") {
-          accumulatedCitations = data.data.citations || [];
-          setStreamCitations(accumulatedCitations);
+          activeStream.accumulatedCitations = data.data.citations || [];
+          if (data.data.validated_text && data.data.validated_text.length >= activeStream.accumulatedText.length) {
+            activeStream.accumulatedText = data.data.validated_text;
+            if (activeConvId === prevConvIdRef.current) {
+              setCurrentStreamText(activeStream.accumulatedText);
+            }
+          }
+          if (activeConvId === prevConvIdRef.current) {
+            setStreamCitations(activeStream.accumulatedCitations);
+          }
         } else if (data.type === "done") {
-          accumulatedLanguage = data.data.response_language || "English";
+          activeStream.accumulatedLanguage = data.data.response_language || "English";
         } else if (data.type === "error") {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "error",
-              content: data.data.message + "\n\n" + (data.data.detail || ""),
-            },
-          ]);
           eventSource.close();
-          eventSourceRef.current = null;
-          setCurrentStreamText("");
-          setStreamCitations([]);
-          setIsStreaming(false);
+          delete activeStreamsRef.current[activeConvId];
+          
+          if (activeConvId === prevConvIdRef.current) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "error",
+                content: data.data.message + "\n\n" + (data.data.detail || ""),
+              },
+            ]);
+            setCurrentStreamText("");
+            setStreamCitations([]);
+            setIsStreaming(false);
+          }
           onMessageSent?.();
           return;
         }
@@ -258,27 +399,34 @@ export default function ChatWorkspace({
     eventSource.onerror = (err) => {
       console.error("EventSource error:", err);
       eventSource.close();
-      eventSourceRef.current = null;
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: accumulatedText || "Connection interrupted. Please try again.",
-          citations: accumulatedCitations,
-          response_language: accumulatedLanguage,
-        },
-      ]);
-      setCurrentStreamText("");
-      setStreamCitations([]);
-      setIsStreaming(false);
+      const activeStream = activeStreamsRef.current[activeConvId];
+      delete activeStreamsRef.current[activeConvId];
+      
+      if (activeConvId === prevConvIdRef.current) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: (activeStream ? activeStream.accumulatedText : "") || "Connection interrupted. Please try again.",
+            citations: activeStream ? activeStream.accumulatedCitations : [],
+            response_language: activeStream ? activeStream.accumulatedLanguage : "English",
+          },
+        ]);
+        setCurrentStreamText("");
+        setStreamCitations([]);
+        setIsStreaming(false);
+      }
+      onMessageSent?.();
     };
   };
 
   const handleStopStreaming = () => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    const activeStream = activeStreamsRef.current[conversationId];
+    if (activeStream && activeStream.eventSource) {
+      activeStream.eventSource.close();
     }
+    delete activeStreamsRef.current[conversationId];
+
     setMessages((prev) => [
       ...prev,
       {
@@ -328,6 +476,7 @@ export default function ChatWorkspace({
           setTranscribing(true);
           const formData = new FormData();
           formData.append("audio", audioBlob, "audio.webm");
+          formData.append("lang", language === "en" ? "en" : "hi");
           
           try {
             const response = await fetch(`${API_BASE}/api/voice/transcribe`, {
@@ -445,6 +594,38 @@ export default function ChatWorkspace({
         onScroll={handleScroll}
         className="flex-1 flex flex-col overflow-hidden"
       >
+        {/* Render uploaded documents at the top of the chat area */}
+        {documentsList && documentsList.length > 0 && (
+          <div className="px-6 py-4 max-w-2xl mx-auto w-full border-b" style={{ borderColor: "var(--border)" }}>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+              {language === "hi" ? "संलग्न दस्तावेज" : "Conversation Documents"} ({documentsList.length})
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {documentsList.map((doc) => (
+                <div key={doc.document_id} className="flex items-center space-x-2 bg-white/5 border px-3 py-2 rounded-xl text-xs max-w-xs truncate shadow-sm animate-fade-in" style={{ borderColor: "var(--border)" }}>
+                  <svg className="w-4 h-4 text-purple-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 012-2h4.586A1 1 0 0112 2.586L15.414 6A1 1 0 0116 6.586V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                  </svg>
+                  <span className="truncate flex-1 font-semibold" style={{ color: "var(--text-primary)" }}>
+                    {doc.original_filename}
+                  </span>
+                  <span className="bg-green-500/20 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Ready
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteDocument?.(doc.document_id)}
+                    className="text-slate-500 hover:text-red-400 transition cursor-pointer border-none bg-transparent p-0 flex-shrink-0"
+                    title="Remove document"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <ChatMessages
           messages={messages}
           onCitationClick={onCitationClick}
@@ -471,16 +652,19 @@ export default function ChatWorkspace({
             />
           </div>
         )}
+        
+        {/* Scroll to bottom floating button */}
+        {showScrollBottom && (
+          <button
+            onClick={() => scrollToBottom()}
+            className="absolute bottom-6 right-1/2 translate-x-1/2 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full shadow-lg border cursor-pointer z-50 text-white transition-all animate-fade-in"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <ArrowDown size={16} />
+          </button>
+        )}
       </div>
 
-      {/* Upload Progress Timeline overlay */}
-      {uploadingFile && (
-        <div className="px-4 max-w-2xl mx-auto w-full">
-          <UploadTimeline step={uploadStep} error={uploadError} language={language} />
-        </div>
-      )}
-
-      {/* Input bar section */}
       <div className="p-4" style={{ background: "var(--bg-primary)" }}>
         <InputArea
           input={input}
@@ -500,6 +684,7 @@ export default function ChatWorkspace({
           triggerPhotoUpload={() => photoInputRef.current?.click()}
           triggerCameraOpen={() => setCameraOpen(true)}
           documentsList={documentsList}
+          onDeleteDocument={onDeleteDocument}
           language={language}
         />
       </div>

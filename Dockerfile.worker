@@ -1,0 +1,21 @@
+# Production Dockerfile for Saarthi AI Background RAG Worker
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ ./backend/
+COPY knowledge_base/ ./knowledge_base/
+COPY scratch/ ./scratch/
+COPY data/ ./data/
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "backend/job_queue.py"]

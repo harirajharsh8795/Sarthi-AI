@@ -89,19 +89,9 @@ export default function CitationDrawer({ citation, isOpen, onClose, language }) 
             <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
               {t.docExcerpt}
             </h4>
-            {isUserDoc ? (
-              <div className="bg-purple-950/20 border border-purple-900/40 rounded-xl p-4 text-center">
-                <svg className="w-8 h-8 text-purple-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <p className="text-xs text-purple-300 font-semibold">{t.userDoc}</p>
-                <p className="text-[10px] text-purple-450 mt-1">{t.docPrivate}</p>
-              </div>
-            ) : (
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 text-xs text-slate-300 leading-relaxed shadow-md italic">
-                "{citation.text_preview || "No preview available."}..."
-              </div>
-            )}
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3.5 text-xs text-slate-300 leading-relaxed shadow-md italic">
+              {citation.text_preview ? `"${citation.text_preview}..."` : "No preview available for this source."}
+            </div>
           </div>
         </div>
       </div>

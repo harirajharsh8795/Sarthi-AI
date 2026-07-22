@@ -1,0 +1,41 @@
+{
+  "backend": {
+    "file_count": 64,
+    "dead_code_hints": [
+      "config.py:2: unused import 'HttpUrl' (90% confidence)",
+      "kb_pipeline.py:7: unused import 'tqdm' (90% confidence)",
+      "main.py:18: unused import 'Depends' (90% confidence)",
+      "main.py:18: unused import 'HTTPException' (90% confidence)",
+      "main.py:969: unused variable 'fallback_path' (100% confidence)",
+      "metrics_manager.py:2: unused import 'statistics' (90% confidence)",
+      "test scripts (do not deploy to Jetson)\\test_backend_stability.py:3: unused import 'pytest' (90% confidence)",
+      "test scripts (do not deploy to Jetson)\\test_backend_stability.py:13: unused import 'execute_with_retry' (90% confidence)",
+      "test scripts (do not deploy to Jetson)\\test_cognitive_rag.py:3: unused import 'pytest' (90% confidence)",
+      "test scripts (do not deploy to Jetson)\\test_edge_runtime.py:3: unused import 'pytest' (90% confidence)",
+      "test scripts (do not deploy to Jetson)\\test_security.py:3: unused import 'pytest' (90% confidence)"
+    ],
+    "complexity": [
+      "test scripts (do not deploy to Jetson)\\test_stage2_retrieval.py",
+      "    F 23:0 run_tests - C",
+      "    F 14:0 create_test_docx - A",
+      "test scripts (do not deploy to Jetson)\\test_stage3_inference.py",
+      "    F 47:0 run_scenario - C",
+      "    F 21:0 preflight_check - A",
+      "    F 113:0 test_inference_suite - A",
+      "",
+      "358 blocks (classes, functions, methods) analyzed.",
+      "Average complexity: A (4.656424581005586)"
+    ]
+  },
+  "frontend": {
+    "file_count": 24,
+    "depcheck": [
+      "Unused devDependencies",
+      "* @types/react",
+      "* @types/react-dom",
+      "* autoprefixer",
+      "* postcss",
+      "* tailwindcss"
+    ]
+  }
+}

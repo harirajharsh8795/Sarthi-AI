@@ -34,38 +34,7 @@ class QueryPlanner:
                 "query_terms": query
             }]
 
-        # Call local LLM to get a structured task decomposition plan
-        prompt = (
-            f"Query: \"{query}\"\n\n"
-            f"Decompose the query above into a list of sub-questions/tasks for a document search engine. "
-            f"Output JSON list containing exactly the keys: \"task_id\" (integer), "
-            f"\"description\" (short detail of the task), and \"query_terms\" (standalone keywords to search). "
-            f"Do not write conversational text or wrapper, output ONLY the JSON list."
-        )
-
-        try:
-            r = requests.post(
-                settings.OLLAMA_URL,
-                json={
-                    "model": settings.LLM_MODEL_NAME,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.0}
-                },
-                timeout=8
-            )
-            if r.status_code == 200:
-                resp = r.json().get("response", "").strip()
-                json_match = re.search(r'\[.*\]', resp, re.DOTALL)
-                if json_match:
-                    plan = json.loads(json_match.group(0))
-                    if isinstance(plan, list) and len(plan) > 0:
-                        logger.info(f"Generated query plan: {plan}")
-                        return plan
-        except Exception as e:
-            logger.warning(f"Failed to generate query plan using LLM: {e}")
-
-        # Fallback to simple split
+        # To minimize pre-generation latency on local 1B model, bypass LLM planner and use simple regex split fallback directly
         parts = re.split(split_pattern, query, flags=re.IGNORECASE)
         plan = []
         for idx, part in enumerate(parts, 1):

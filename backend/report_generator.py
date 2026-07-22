@@ -2,9 +2,10 @@ import os
 import json
 import sqlite3
 import kb_pipeline
+from logger_config import logger
 
 def generate_report():
-    print("Generating Stage 0 Knowledge Base Seeding Report...")
+    logger.debug("Generating Stage 0 Knowledge Base Seeding Report...")
     
     # 1. Query SQLite documents
     try:
@@ -15,7 +16,7 @@ def generate_report():
         conn.close()
         documents = [dict(r) for r in rows]
     except Exception as e:
-        print(f"Error reading SQLite database: {e}")
+        logger.debug(f"Error reading SQLite database: {e}")
         documents = []
         
     # 2. Query ChromaDB count
@@ -137,12 +138,12 @@ def generate_report():
     try:
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_content)
-        print(f"Report written successfully to {report_path}")
+        logger.debug(f"Report written successfully to {report_path}")
     except Exception as e:
-        print(f"Error writing report file: {e}")
+        logger.debug(f"Error writing report file: {e}")
         
     # Also print to console
-    print("\n" + report_content)
+    logger.debug("\n" + report_content)
 
 if __name__ == "__main__":
     generate_report()

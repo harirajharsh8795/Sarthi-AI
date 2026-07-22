@@ -44,18 +44,30 @@ class ObservabilityService:
         
         avg_latency = sum(self.latency_buffer) / len(self.latency_buffer) if self.latency_buffer else 0.0
         
-        # Active counts from singleton pools
-        from job_queue import job_queue
-        from main import active_streams
-        
-        pending_jobs = sum(1 for j in job_queue.jobs.values() if j["status"] in ["queued", "running"])
-        
+        import sys
+        # Avoid circular imports
+        pending_jobs = 0
+        if "job_queue" in sys.modules:
+            try:
+                jq = sys.modules["job_queue"].job_queue
+                pending_jobs = sum(1 for j in jq.jobs.values() if j["status"] in ["queued", "running"])
+            except Exception:
+                pass
+                
+        active_count = 0
+        if "main" in sys.modules:
+            try:
+                active_streams = sys.modules["main"].active_streams
+                active_count = len(active_streams)
+            except Exception:
+                pass
+                
         return {
             "timestamp": time.strftime("%H:%M:%S"),
             "requests_per_minute": rpm,
             "errors_per_minute": epm,
             "average_latency_ms": round(avg_latency, 2),
-            "active_streams_count": len(active_streams),
+            "active_streams_count": active_count,
             "queued_jobs_count": pending_jobs,
             "jobs_queue_status": "idle" if pending_jobs == 0 else "busy"
         }

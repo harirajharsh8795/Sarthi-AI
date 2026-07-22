@@ -52,11 +52,18 @@ class RankingService:
             
         reranked = []
         for c in chunks:
-            trust = self.get_source_trust_score(c)
+            sim = c.get("similarity_score", 0.0)
             overlap = self.compute_keyword_overlap(query, c["text"])
+            trust = self.get_source_trust_score(c)
             
-            # Hybrid score: 60% similarity, 25% trust score coefficient, 15% keyword overlap
-            hybrid_score = (c["similarity_score"] * 0.60) + (trust * 0.25) + (overlap * 0.15)
+            # Filter out completely irrelevant chunks (similarity < 0.20 and zero keyword overlap)
+            if sim < 0.20 and overlap == 0.0:
+                continue
+
+            # Multiplicative hybrid score: 70% similarity, 30% keyword overlap, with minor trust multiplier (0.95 to 1.0)
+            base_score = (sim * 0.70) + (overlap * 0.30)
+            trust_multiplier = 0.95 + (trust * 0.05)
+            hybrid_score = base_score * trust_multiplier
             
             c_copy = dict(c)
             c_copy["trust_score"] = trust

@@ -97,13 +97,13 @@ def init_session_db():
         pass  # Column already exists
 
     try:
-        cursor.execute("ALTER TABLE user_documents ADD COLUMN knowledge_graph TEXT;")
+        cursor.execute("ALTER TABLE conversations ADD COLUMN device_id TEXT;")
     except sqlite3.OperationalError:
         pass  # Column already exists
         
     conn.commit()
     conn.close()
-    print("SQLite session tables initialized successfully.")
+    logger.debug("SQLite session tables initialized successfully.")
 
 def get_or_create_session(session_id, display_name=None):
     """
@@ -113,7 +113,7 @@ def get_or_create_session(session_id, display_name=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     
     cursor.execute("SELECT * FROM user_sessions WHERE session_id = ?", (session_id,))
     row = cursor.fetchone()
@@ -152,7 +152,7 @@ def create_document_record(document_id, session_id, original_filename, file_type
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     
     # Check for existing document
     cursor.execute("SELECT id FROM user_documents WHERE id = ?", (document_id,))
@@ -199,7 +199,7 @@ def update_document_status(document_id, session_id, status, page_count=None, chu
         params.append(indexed_at)
     else:
         if status == "indexed":
-            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             update_fields.append("indexed_at = ?")
             params.append(now_str)
             
@@ -229,8 +229,7 @@ def delete_document_record(document_id, session_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        UPDATE user_documents 
-        SET status = 'deleted' 
+        DELETE FROM user_documents 
         WHERE id = ? AND session_id = ?
     """, (document_id, session_id))
     conn.commit()
@@ -297,20 +296,35 @@ def list_session_documents(session_id: str, conversation_id: str = None) -> list
 # ==========================================
 
 import json
+from logger_config import logger
 
-def list_conversations(session_id: str) -> list:
-    """Retrieves all conversations for a session, ordered by updated_at descending."""
+def list_conversations(session_id):
+    """Retrieves all conversations for a session."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, session_id, title, message_count, created_at, updated_at
+        SELECT id, title, message_count, created_at, updated_at
         FROM conversations
         WHERE session_id = ?
         ORDER BY updated_at DESC
     """, (session_id,))
     rows = cursor.fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    return [dict(row) for row in rows]
+
+def list_all_conversations(device_id):
+    """Retrieves all conversations for a specific device_id."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, title, message_count, created_at, updated_at
+        FROM conversations
+        WHERE device_id = ?
+        ORDER BY updated_at DESC
+    """, (device_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 def get_conversation_messages(conversation_id: str) -> list:
     """Retrieves all messages for a conversation, ordered by created_at ascending."""
@@ -338,16 +352,16 @@ def get_conversation_messages(conversation_id: str) -> list:
         res.append(d)
     return res
 
-def create_conversation(conversation_id: str, session_id: str, title: str) -> str:
+def create_conversation(conversation_id: str, session_id: str, title: str = "New Conversation", device_id: str = None) -> str:
     """Creates a new conversation record in SQLite."""
     get_or_create_session(session_id)
     conn = get_db_connection()
     cursor = conn.cursor()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     cursor.execute("""
-        INSERT INTO conversations (id, session_id, title, message_count, created_at, updated_at)
-        VALUES (?, ?, ?, 0, ?, ?)
-    """, (conversation_id, session_id, title[:100], now_str, now_str))
+        INSERT INTO conversations (id, session_id, title, message_count, created_at, updated_at, device_id)
+        VALUES (?, ?, ?, 0, ?, ?, ?)
+    """, (conversation_id, session_id, title[:100], now_str, now_str, device_id))
     conn.commit()
     conn.close()
     return conversation_id
@@ -359,7 +373,7 @@ def save_message(message_id: str, conversation_id: str, role: str, content: str,
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     citations_str = json.dumps(citations) if citations is not None else "[]"
     
     # 1. Save the message record
@@ -411,9 +425,9 @@ def delete_conversation(conversation_id: str, session_id: str) -> list:
     # 2. Delete messages in the conversation
     cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
     
-    # 3. Soft-delete documents in database (status='deleted')
+    # 3. Hard-delete documents in database
     cursor.execute(
-        "UPDATE user_documents SET status = 'deleted' WHERE session_id = ? AND conversation_id = ?",
+        "DELETE FROM user_documents WHERE session_id = ? AND conversation_id = ?",
         (session_id, conversation_id)
     )
     
@@ -454,7 +468,7 @@ def delete_messages_after(conversation_id: str, message_id: str) -> int:
     cnt_row = cursor.fetchone()
     remaining = cnt_row["cnt"] if cnt_row else 0
     
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     cursor.execute(
         "UPDATE conversations SET message_count = ?, updated_at = ? WHERE id = ?",
         (remaining, now_str, conversation_id)

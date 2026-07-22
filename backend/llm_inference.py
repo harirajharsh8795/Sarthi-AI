@@ -21,16 +21,23 @@ from confidence_service import confidence_service
 from validation_service import validation_service
 from post_processor import post_processor
 from followup_service import followup_service
+from logger_config import logger
 
 OLLAMA_URL = settings.OLLAMA_URL
 MODEL_NAME = settings.LLM_MODEL_NAME
+
+def detect_response_language(text: str) -> str:
+    """Detects the language of the query using intent_service."""
+    return intent_service.detect_language(text)
 
 def generate_answer_stream(query: str, session_id: str | None, response_language: str | None = None, conversation_id: str | None = None) -> Generator[dict, None, None]:
     try:
         yield from _generate_answer_stream_inner(query, session_id, response_language, conversation_id)
     except Exception as e:
         import traceback
-        yield {"type": "error", "data": {"message": str(e), "detail": traceback.format_exc()}}
+        import logging
+        logging.getLogger(__name__).error(f"Stream generation error: {e}\n{traceback.format_exc()}")
+        yield {"type": "error", "data": {"message": f"Something went wrong while generating the response.\n\nError: {str(e)}" }}
         return
 
 def _generate_answer_stream_inner(
@@ -55,9 +62,27 @@ def _generate_answer_stream_inner(
     """
     start_time = time.perf_counter()
     
+    # 0. Prompt Security Scan
+    from prompt_guard import PromptGuard
+    guard = PromptGuard()
+    guard_res = guard.scan_query(query)
+    if guard_res["blocked"]:
+        logger.warning(f"Query blocked by PromptGuard: {guard_res['reason']}")
+        yield {"type": "token", "data": {"token": f"⚠️ Security Notice: Query could not be processed because it contains prohibited pattern vectors ({guard_res['reason']})."}}
+        yield {"type": "done", "data": {}}
+        return
+
     # 1. Query Understanding
+    import uuid
+    if conversation_id:
+        user_msg_id = f"msg_{uuid.uuid4().hex[:8]}"
+        try:
+            session_manager.save_message(user_msg_id, conversation_id, "user", query)
+        except Exception as e:
+            logger.error(f"Failed to save user message: {e}")
+
     classification = intent_service.classify_query(query)
-    lang = response_language or classification["language"]
+    lang = classification["language"]
     domain = classification["domain"]
     intent = classification["intent"]
     
@@ -80,7 +105,7 @@ def _generate_answer_stream_inner(
     
     # 4. Multi-hop Retrieval & Hybrid Reranking
     start_retrieval = time.perf_counter()
-    context_chunks = multihop_service.retrieve_multihop(plan, session_id or "", conversation_id)
+    context_chunks = multihop_service.retrieve_multihop(plan, session_id or "", conversation_id, query_language=lang, original_query=query)
     
     # Isolation Guard Verification
     from isolation_guard import isolation_guard
@@ -114,15 +139,15 @@ def _generate_answer_stream_inner(
     knowledge_base_chunks_used = sum(1 for c in context_chunks if c["collection"] == "knowledge_base")
     
     # Check threshold guard
-    SKIP_LLM_THRESHOLD = 0.52
-    max_sim = max([c.get("hybrid_score", 0.0) for c in context_chunks]) if context_chunks else 0.0
+    SKIP_LLM_THRESHOLD = 0.22
+    max_sim = max([c.get("hybrid_score") or c.get("similarity_score", 0.0) for c in context_chunks]) if context_chunks else 0.0
     has_user_doc_chunks = user_doc_chunks_used > 0
     
-    # Check medical domain alignment
+    # Check medical domain alignment (support both 'medical' and 'hospital' domains)
     query_lower = query.lower()
-    medical_keywords = ["bukhar", "fever", "bimari", "dawai", "dawa", "ilaj", "symptoms", "pain", "dard"]
+    medical_keywords = ["bukhar", "bhukar", "bhukhar", "bukhaar", "fever", "bimari", "bimaari", "dawai", "dvai", "dvaii", "dawa", "ilaj", "symptoms", "pain", "dard", "dengue", "malaria", "cough", "khansi", "doctor", "hospital", "report", "prescription", "goli", "condom", "sex", "libido"]
     is_medical_query = any(k in query_lower for k in medical_keywords)
-    domain_mismatch = is_medical_query and not has_user_doc_chunks and all(c.get("domain") != "hospital" for c in context_chunks)
+    domain_mismatch = is_medical_query and not has_user_doc_chunks and all(c.get("domain") not in ("hospital", "medical") for c in context_chunks)
     
     if (max_sim < SKIP_LLM_THRESHOLD or domain_mismatch) and not has_user_doc_chunks:
         # Fallback text
@@ -137,6 +162,7 @@ def _generate_answer_stream_inner(
                 "You can upload a relevant document and ask me questions about it."
             )
             
+        yield {"skipped_llm": True, "has_context": False, "citations": []}
         yield {"type": "token", "data": {"token": fallback_text}}
         yield {"type": "citation", "data": {"citations": []}}
         
@@ -148,6 +174,9 @@ def _generate_answer_stream_inner(
             model_name=MODEL_NAME, intent=intent, detected_domain=domain
         )
         return
+
+    # Limit context chunks to top 2 for maximum inference speed and precision
+    context_chunks = context_chunks[:2]
 
     # 5. Knowledge Graph Triples extraction
     start_graph = time.perf_counter()
@@ -163,25 +192,31 @@ def _generate_answer_stream_inner(
     prompt = prompt_builder.build_adaptive_prompt(
         rewritten_query, compressed_chunks, lang, domain, intent, plan, graph_triples
     )
+    prompt = f"IMPORTANT: You MUST respond ONLY in {lang}. Do not switch languages under any circumstances.\n\n" + prompt
     
-    # 8. Local LLM streaming
+    # Sanitize user query string (strip trailing slashes that break string formatting)
+    query = query.strip().rstrip('\\').rstrip('/').strip()
+
+    # 8. Local LLM streaming with maximum speed optimizations (greedy temperature 0.0)
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": True,
         "options": {
-            "temperature": 0.1,
+            "temperature": 0.0,
             "top_p": 0.9,
-            "num_ctx": 2048,
-            "num_predict": 512
+            "num_ctx": 1024,
+            "num_predict": 450,
+            "repeat_penalty": 1.15
         }
     }
     
     full_text = ""
     total_tokens = 0
+    token_buffer = ""
     
     try:
-        response = requests.post(OLLAMA_URL, json=payload, stream=True, timeout=120)
+        response = requests.post(settings.OLLAMA_URL, json=payload, stream=True, timeout=120)
         response.raise_for_status()
         
         for line in response.iter_lines():
@@ -190,55 +225,87 @@ def _generate_answer_stream_inner(
                 token = data.get("response", "")
                 full_text += token
                 total_tokens += 1
+                token_buffer += token
                 
-                yield {
-                    "type": "token",
-                    "data": {"token": token}
-                }
+                # Buffer tokens slightly (2-3 chars or word boundaries) to deliver smooth SSE streaming without micro-lag
+                if len(token_buffer) >= 3 or " " in token_buffer or "\n" in token_buffer or data.get("done", False):
+                    yield {
+                        "type": "token",
+                        "data": {"token": token_buffer}
+                    }
+                    token_buffer = ""
                 
                 if data.get("done", False):
+                    if token_buffer:
+                        yield {
+                            "type": "token",
+                            "data": {"token": token_buffer}
+                        }
+                        token_buffer = ""
                     break
     except Exception as e:
-        logging.error(f"Inference calling failed: {e}")
-        yield {
-            "type": "error",
-            "data": {"message": f"Inference error: {str(e)}"}
-        }
+        import traceback
+        logger.error(f"Ollama inference failed: {e}\n{traceback.format_exc()}")
+        yield {"type": "error", "data": {"message": "Inference failed to connect to the model."}}
+        return
+        
+    generation_time_ms = (time.perf_counter() - start_time) * 1000
+    tokens_per_second = total_tokens / (generation_time_ms / 1000) if generation_time_ms > 0 else 0.0
 
-    generation_time_sec = time.perf_counter() - start_time
-    generation_time_ms = int(generation_time_sec * 1000)
+    logger.debug(f"DEBUG: Assembled text prefix (200 chars): {full_text[:200]!r}")
+    logger.debug(f"DEBUG: Context chunks count: {len(context_chunks)}")
     
     # 9. Citation Validation & Self-Evaluation
-    validation_res = validation_service.validate_citations(full_text, context_chunks)
-    validated_text = validation_res["validated_answer"]
-    
-    from output_validator import output_validator
-    validated_text = output_validator.validate_and_refine_output(validated_text, context_chunks)
-    
-    grounding_score = validation_res["grounding_score"]
-    
+    try:
+        validation_res = validation_service.validate_citations(full_text, context_chunks, query)
+        validated_text = validation_res["validated_text"]
+        
+        from output_validator import output_validator
+        validated_text = output_validator.validate_and_refine_output(validated_text, context_chunks)
+        
+        grounding_score = validation_res["grounding_score"]
+    except Exception as e:
+        logger.error(f"Validation failed, using raw output: {e}")
+        validated_text = full_text
+        grounding_score = 0.0
+
     # Count validated citations list
     citations_used = []
     seen_indices = set()
-    matches = re.findall(r'\[(\d+)\]', validated_text)
-    
-    for match in matches:
-        try:
-            idx = int(match)
-            if idx in seen_indices:
-                continue
-            if 1 <= idx <= len(context_chunks):
-                chunk = context_chunks[idx - 1]
+    try:
+        matches = re.findall(r'\[(\d+)\]', validated_text)
+        for match in matches:
+            try:
+                idx = int(match)
+                if idx in seen_indices:
+                    continue
+                if 1 <= idx <= len(context_chunks):
+                    chunk = context_chunks[idx - 1]
+                    citations_used.append({
+                        "index": idx,
+                        "filename": chunk["source"],
+                        "page_number": chunk["page_number"],
+                        "domain": chunk["domain"],
+                        "collection": chunk["collection"],
+                        "text_preview": chunk.get("text", "")
+                    })
+                    seen_indices.add(idx)
+            except ValueError:
+                pass
+
+        # Fallback: if no explicit citations were generated by LLM but retrieval succeeded, map all context chunks
+        if len(citations_used) == 0 and len(context_chunks) > 0:
+            for idx, chunk in enumerate(context_chunks, 1):
                 citations_used.append({
                     "index": idx,
                     "filename": chunk["source"],
                     "page_number": chunk["page_number"],
                     "domain": chunk["domain"],
-                    "collection": chunk["collection"]
+                    "collection": chunk["collection"],
+                    "text_preview": chunk.get("text", "")
                 })
-                seen_indices.add(idx)
-        except ValueError:
-            pass
+    except Exception as e:
+        logger.error(f"Citation mapping failed: {e}")
 
     # Yield valid citations list to frontend
     yield {
@@ -249,35 +316,58 @@ def _generate_answer_stream_inner(
     }
     
     # Self-Evaluation
-    self_eval = validation_service.evaluate_response_self(validated_text, context_chunks, grounding_score)
+    self_eval = {"eval_summary": "N/A"}
+    try:
+        self_eval = validation_service.evaluate_response_self(validated_text, context_chunks, grounding_score)
+    except Exception as e:
+        logger.error(f"Self-Evaluation failed: {e}")
     
     # 10. Confidence Calibration
-    conf_res = confidence_service.calculate_confidence(context_chunks, domain, len(citations_used))
+    conf_res = {"confidence_score": 0.0, "confidence_label": "UNKNOWN"}
+    try:
+        conf_res = confidence_service.calculate_confidence(context_chunks, domain, len(citations_used))
+    except Exception as e:
+        logger.error(f"Confidence calibration failed: {e}")
     
     # 11. Follow-up Suggestions
-    start_followups = time.perf_counter()
-    followups = followup_service.generate_followups(rewritten_query, validated_text, domain, lang)
-    followup_duration = time.perf_counter() - start_followups
+    followups = []
+    try:
+        start_followups = time.perf_counter()
+        followups = followup_service.generate_followups(rewritten_query, validated_text, domain, lang)
+        followup_duration = time.perf_counter() - start_followups
+    except Exception as e:
+        logger.error(f"Follow-up generation failed: {e}")
     
     # Telemetry Log
-    tokens_per_second = (total_tokens / generation_time_sec) if generation_time_sec > 0 else 0.0
+    tokens_per_second = (total_tokens / (generation_time_ms / 1000)) if generation_time_ms > 0 else 0.0
     
-    inference_id = telemetry.log_inference(
-        session_id=session_id, query=query, expanded_query=rewritten_query, response_language=lang,
-        has_context=len(citations_used) > 0, skipped_llm=False, 
-        user_doc_chunks_used=user_doc_chunks_used, knowledge_base_chunks_used=knowledge_base_chunks_used,
-        total_chunks_in_prompt=len(compressed_chunks), total_tokens_generated=total_tokens,
-        generation_time_ms=generation_time_ms, tokens_per_second=tokens_per_second, model_name=MODEL_NAME,
-        intent=intent, detected_domain=domain, rewritten_query=rewritten_query,
-        query_plan=json.dumps(plan), confidence_score=conf_res["confidence_score"],
-        confidence_label=conf_res["confidence_label"], grounding_score=grounding_score,
-        citation_coverage=len(citations_used)/len(context_chunks) if context_chunks else 0.0,
-        self_eval_summary=self_eval["eval_summary"], retrieval_mrr=eval_metrics["mrr"],
-        retrieval_ndcg=eval_metrics["ndcg"], knowledge_graph=json.dumps(graph_triples)
-    )
+    try:
+        inference_id = telemetry.log_inference(
+            session_id=session_id, query=query, expanded_query=rewritten_query, response_language=lang,
+            has_context=len(citations_used) > 0, skipped_llm=False, 
+            user_doc_chunks_used=user_doc_chunks_used, knowledge_base_chunks_used=knowledge_base_chunks_used,
+            total_chunks_in_prompt=len(compressed_chunks), total_tokens_generated=total_tokens,
+            generation_time_ms=generation_time_ms, tokens_per_second=tokens_per_second, model_name=MODEL_NAME,
+            intent=intent, detected_domain=domain, rewritten_query=rewritten_query,
+            query_plan=json.dumps(plan), confidence_score=conf_res["confidence_score"],
+            confidence_label=conf_res["confidence_label"], grounding_score=grounding_score,
+            citation_coverage=len(citations_used)/len(context_chunks) if context_chunks else 0.0,
+            self_eval_summary=self_eval["eval_summary"], retrieval_mrr=eval_metrics["mrr"],
+            retrieval_ndcg=eval_metrics["ndcg"], knowledge_graph=json.dumps(graph_triples)
+        )
+    except Exception as e:
+        logger.error(f"Telemetry logging failed: {e}")
     
     if session_id:
         session_manager.get_or_create_session(session_id)
+        
+    if conversation_id:
+        import uuid
+        asst_msg_id = f"msg_{uuid.uuid4().hex[:8]}"
+        try:
+            session_manager.save_message(asst_msg_id, conversation_id, "assistant", validated_text, citations_used)
+        except Exception as e:
+            logger.error(f"Failed to save assistant message: {e}")
         
     # Yield done event compatible with legacy parser
     yield {

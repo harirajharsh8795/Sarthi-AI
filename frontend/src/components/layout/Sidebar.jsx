@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Plus, Sun, Moon, FileText, BarChart3, ChevronDown, ChevronUp, Brain } from "lucide-react";
 import SearchPanel from "../sidebar/SearchPanel";
 import ConversationList from "../ConversationList";
-import DocumentPanel from "../sidebar/DocumentPanel";
 import SystemStats from "../sidebar/SystemStats";
 import { translations } from "../../utils/localization";
 
@@ -25,7 +24,6 @@ export default function Sidebar({
 }) {
   const t = translations[language] || translations.en;
 
-  const [docsExpanded, setDocsExpanded] = useState(true);
   const [statsExpanded, setStatsExpanded] = useState(false);
 
   return (
@@ -95,32 +93,7 @@ export default function Sidebar({
 
       {/* 5. Collapsible bottom utilities */}
       <div className="p-3 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
-        {/* Documents Collapsible Manager */}
-        <div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--border)" }}>
-          <button
-            onClick={() => setDocsExpanded(!docsExpanded)}
-            className="w-full px-3 py-2 flex justify-between items-center bg-white/5 hover:bg-white/10 transition text-xs font-semibold cursor-pointer border-none"
-            style={{ color: "var(--text-primary)" }}
-          >
-            <span className="flex items-center gap-2">
-              <FileText size={14} className="text-purple-500" />
-              <span>{t.documentsHeader}</span>
-            </span>
-            <span className="text-[10px] text-slate-500 font-bold">
-              {docsExpanded ? "▲" : "▼"}
-            </span>
-          </button>
-          {docsExpanded && (
-            <div className="p-2 border-t" style={{ borderColor: "var(--border)", background: "var(--bg-primary)" }}>
-              <DocumentPanel
-                sessionId={sessionId}
-                conversationId={conversationId}
-                refreshTrigger={refreshTrigger}
-                language={language}
-              />
-            </div>
-          )}
-        </div>
+
 
         {/* System telemetry stats collapsible */}
         <SystemStats

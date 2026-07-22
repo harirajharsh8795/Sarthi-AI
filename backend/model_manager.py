@@ -22,7 +22,8 @@ class ModelLifecycleManager:
         """Pulls the model from the Ollama library if not present locally."""
         try:
             # Check local tags first
-            r = requests.get(f"http://localhost:11434/api/tags", timeout=1.5)
+            tags_url = settings.OLLAMA_URL.replace("/api/generate", "/api/tags")
+            r = requests.get(tags_url, timeout=1.5)
             if r.status_code == 200:
                 models = [m["name"] for m in r.json().get("models", [])]
                 # Match tags (e.g. llama3.2:1b or llama3.2:1b-instruct)
@@ -31,8 +32,9 @@ class ModelLifecycleManager:
                     
             logger.warning(f"Model {self.model_name} is missing. Initiating pull...")
             # Trigger asynchronous pull
+            pull_url = settings.OLLAMA_URL.replace("/api/generate", "/api/pull")
             requests.post(
-                "http://localhost:11434/api/pull", 
+                pull_url, 
                 json={"name": self.model_name, "stream": False},
                 timeout=180
             )
@@ -53,7 +55,7 @@ class ModelLifecycleManager:
         try:
             # Simple short instruction to load model weights
             r = requests.post(
-                "http://localhost:11434/api/generate",
+                settings.OLLAMA_URL,
                 json={
                     "model": self.model_name,
                     "prompt": "ping",
@@ -93,7 +95,7 @@ class ModelLifecycleManager:
         try:
             # Ollama releases a model if loaded with keep_alive=0
             requests.post(
-                "http://localhost:11434/api/generate",
+                settings.OLLAMA_URL,
                 json={
                     "model": self.model_name,
                     "prompt": "",

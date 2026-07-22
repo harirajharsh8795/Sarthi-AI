@@ -1,5 +1,6 @@
-import React from "react";
 import { motion } from "framer-motion";
+import { Brain } from "lucide-react";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 /**
  * Animated typing indicator shown during LLM streaming.
@@ -19,16 +20,14 @@ export default function TypingIndicator({ streamText, streamCitations, onCitatio
           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 shadow-lg select-none"
           style={{ background: "var(--accent-gradient)", color: "white" }}
         >
-          <span className="text-xs font-bold">सा</span>
+          <Brain className="w-4 h-4 text-white" />
         </div>
 
         <div className="flex-1 text-left text-sm leading-relaxed max-w-[calc(100%-44px)]" style={{ color: "var(--text-primary)" }}>
-          <span className="whitespace-pre-wrap leading-relaxed inline">
-            {streamText}
-          </span>
+          <MarkdownRenderer content={streamText} />
           {/* Blinking cursor */}
           <span
-            className="inline-block w-0.5 h-4 ml-0.5 align-middle"
+            className="inline-block w-0.5 h-4 ml-0.5 align-middle mt-1"
             style={{
               background: "var(--accent)",
               animation: "pulse 1s ease-in-out infinite",
@@ -88,7 +87,7 @@ export default function TypingIndicator({ streamText, streamCitations, onCitatio
         className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 shadow-lg select-none"
         style={{ background: "var(--accent-gradient)", color: "white" }}
       >
-        <span className="text-xs font-bold">सा</span>
+        <Brain className="w-4 h-4 text-white" />
       </div>
 
       <div

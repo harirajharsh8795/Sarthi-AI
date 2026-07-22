@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertTriangle, AlertCircle, Brain
 } from "lucide-react";
 import { translations } from "../../utils/localization";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 const API_BASE = "http://localhost:8000";
 
@@ -163,86 +164,7 @@ export default function MessageBubble({
     }
   };
 
-  const formatText = (text) => {
-    if (!text) return "";
-
-    const lines = text.split("\n");
-    return lines.map((line, lineIdx) => {
-      const trimmed = line.trim();
-      const isH2 = trimmed.startsWith("## ");
-      const isH3 = trimmed.startsWith("### ");
-      const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("* ");
-      const numberedMatch = trimmed.match(/^(\d+)\.\s+/);
-      const isNumbered = !!numberedMatch;
-      
-      let content = line;
-      if (isH2) content = trimmed.substring(3);
-      else if (isH3) content = trimmed.substring(4);
-      else if (isBullet) content = line.replace(/^[\s-*]+/, "");
-      else if (isNumbered) content = line.replace(/^\s*\d+\.\s+/, "");
-
-      // Markdown bold matching
-      const boldRegex = /\*\*([^*]+)\*\*/g;
-      const parts = [];
-      let lastIndex = 0;
-      let match;
-
-      while ((match = boldRegex.exec(content)) !== null) {
-        if (match.index > lastIndex) {
-          parts.push(content.substring(lastIndex, match.index));
-        }
-        parts.push(
-          <strong key={match.index} className="font-bold" style={{ color: "var(--text-primary)" }}>
-            {match[1]}
-          </strong>
-        );
-        lastIndex = boldRegex.lastIndex;
-      }
-
-      if (lastIndex < content.length) {
-        parts.push(content.substring(lastIndex));
-      }
-
-      const inlineContent = parts.length > 0 ? parts : content;
-
-      if (isH2) {
-        return (
-          <h2 key={lineIdx} className="text-base font-bold mt-4 mb-2" style={{ color: "var(--text-primary)" }}>
-            {inlineContent}
-          </h2>
-        );
-      }
-      if (isH3) {
-        return (
-          <h3 key={lineIdx} className="text-sm font-bold mt-3 mb-1.5" style={{ color: "var(--text-primary)" }}>
-            {inlineContent}
-          </h3>
-        );
-      }
-      if (isBullet) {
-        return (
-          <li key={lineIdx} className="ml-4 list-disc pl-1 mb-1" style={{ color: "var(--text-secondary)" }}>
-            {inlineContent}
-          </li>
-        );
-      }
-      if (isNumbered) {
-        return (
-          <li key={lineIdx} style={{ listStyleType: 'decimal' }} className="ml-5 pl-1 mb-1" style={{ color: "var(--text-secondary)" }}>
-            {inlineContent}
-          </li>
-        );
-      }
-      if (trimmed === "Sources:") {
-        return null;
-      }
-      return (
-        <p key={lineIdx} className={`mb-2 text-xs leading-relaxed ${trimmed === "" ? "h-2" : ""}`} style={{ color: "var(--text-secondary)" }}>
-          {inlineContent}
-        </p>
-      );
-    });
-  };
+  // formatText has been replaced by MarkdownRenderer
 
   const indicator = getConfidenceIndicator();
   const ConfidenceIcon = indicator?.icon;
@@ -303,7 +225,7 @@ export default function MessageBubble({
               <p className="whitespace-pre-wrap text-xs leading-relaxed">{message.content}</p>
             ) : (
               <div className="space-y-2">
-                <div>{formatText(message.content)}</div>
+                <MarkdownRenderer content={message.content} />
 
                 {/* Sources section */}
                 {message.citations && message.citations.length > 0 && (

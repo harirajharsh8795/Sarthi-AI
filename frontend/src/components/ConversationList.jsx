@@ -86,6 +86,14 @@ export default function ConversationList({
 
   const grouped = groupConversationsByDate(conversations);
 
+  if (activeConversationId === "new") {
+    grouped[t.today].unshift({
+      id: "new",
+      title: "New Conversation",
+      updated_at: new Date().toISOString()
+    });
+  }
+
   return (
     <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 custom-scrollbar">
       {Object.entries(grouped).map(([groupName, groupItems]) => {
@@ -132,8 +140,10 @@ export default function ConversationList({
                 }
 
                 return (
-                  <button
+                  <div
                     key={c.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onConversationClick(c.id)}
                     className={`sidebar-chat-item group/item text-left px-2.5 py-2 rounded-lg text-[11px] transition truncate cursor-pointer flex items-center justify-between border ${
                       isActive ? "active" : ""
@@ -162,7 +172,7 @@ export default function ConversationList({
                         <Trash2 size={11} />
                       </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>

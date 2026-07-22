@@ -28,7 +28,7 @@ def check_session_exists(session_id: str) -> bool:
 def process_results(query_results: dict, collection_name: str, norm_q: float) -> list:
     """
     Processes, filters, and normalizes ChromaDB query results.
-    Computes exact Cosine Similarity from squared L2 distance and vector norms.
+    Computes exact Cosine Similarity from squared L2 distance and vector norms (stored in metadata to avoid slow DB reads).
     """
     chunks = []
     if not query_results or not query_results.get('ids') or len(query_results['ids'][0]) == 0:
@@ -38,31 +38,24 @@ def process_results(query_results: dict, collection_name: str, norm_q: float) ->
     distances = query_results['distances'][0]
     metadatas = query_results['metadatas'][0]
     documents = query_results['documents'][0]
-    embeddings = query_results.get('embeddings')
-    
-    # Grab first list element if embeddings is returned as nested list
-    db_embs = embeddings[0] if embeddings else None
     
     for i in range(len(ids)):
         dist = distances[i]
+        meta = metadatas[i]
+        
+        # Read pre-calculated norm from metadata, or fallback to average norm (2.5) if not indexed yet
+        norm_db = float(meta.get("vector_norm", 2.5))
         
         # Exact Cosine Similarity formula using norms and squared L2 distance:
         # L2_dist = ||q||^2 + ||db||^2 - 2 * ||q|| * ||db|| * cos_sim
         # => cos_sim = (||q||^2 + ||db||^2 - L2_dist) / (2 * ||q|| * ||db||)
-        if db_embs is not None and len(db_embs) > i and db_embs[i] is not None:
-            emb_db = np.array(db_embs[i])
-            norm_db = np.linalg.norm(emb_db)
-            if norm_q > 0 and norm_db > 0:
-                sim = (norm_q**2 + norm_db**2 - dist) / (2.0 * norm_q * norm_db)
-            else:
-                sim = 0.0
+        if norm_q > 0 and norm_db > 0:
+            sim = (norm_q**2 + norm_db**2 - dist) / (2.0 * norm_q * norm_db)
         else:
-            # Safe linear fallback if embeddings are missing
-            sim = 1.0 - (dist / 20.0)
+            sim = 0.0
             
         required_threshold = USER_DOC_MIN_SIMILARITY if collection_name == "user_docs" else MIN_SIMILARITY_SCORE
         if sim >= required_threshold:
-            meta = metadatas[i]
             filename = meta.get('filename') or meta.get('original_filename') or 'unknown'
             domain = meta.get('domain') or meta.get('domain_hint') or 'user_upload'
             language = meta.get('language') or 'en'
@@ -91,7 +84,8 @@ def is_document_about_query(query: str) -> bool:
         "pdf", "document", "uploaded file", "is file", "jo upload",
         "summary do", "samjhao", "explain karo", "kya hai is",
         "explain this", "summarize", "summarise", "about this file",
-        "mera document", "maine upload kiya"
+        "mera document", "maine upload kiya", "report", "my file", 
+        "this doc", "this file"
     ]
     return any(phrase in query_lower for phrase in trigger_phrases)
 
@@ -141,7 +135,7 @@ def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None,
     chunks = sorted(chunks, key=lambda x: (x["page_number"], x.get("chunk_index", 0)))
     return chunks[:n]
 
-def retrieve_context(query: str, session_id: str | None, conversation_id: str | None = None) -> dict:
+def retrieve_context(query: str, session_id: str | None, conversation_id: str | None = None, query_language: str = None) -> dict:
     """
     Exposes primary RAG retrieval interface.
     1. Expands incoming query using glossary.
@@ -190,7 +184,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
             query_embeddings=[query_embedding],
             n_results=8,
             where=where_filter,
-            include=["metadatas", "documents", "distances", "embeddings"]
+            include=["metadatas", "documents", "distances"]
         )
         user_chunks = process_results(results_user, "user_docs", norm_q)
         
@@ -200,23 +194,38 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         if not is_document_about_query(query):
             user_chunks = [c for c in user_chunks if c["similarity_score"] >= 0.50]
         
-    # 4. Retrieve from knowledge_base for each domain to ensure high recall across domains
-    domains = ["banking", "legal", "constitution_and_general_law", "hospital"]
+    # 4. Retrieve from knowledge_base (Global search across all 2700+ chunks)
     kb_chunks = []
     kb_collection = kb_pipeline.get_chroma_collection()
     
+    try:
+        results_global = kb_collection.query(
+            query_embeddings=[query_embedding],
+            n_results=35,
+            include=["metadatas", "documents", "distances"]
+        )
+        kb_chunks = process_results(results_global, "knowledge_base", norm_q)
+    except Exception as query_err:
+        kb_chunks = []
+        
+    # Also attempt domain-filtered query as supplementary
+    domains = ["banking", "legal", "medical", "common", "constitution_and_general_law", "hospital"]
     for dom in domains:
         try:
             results_dom = kb_collection.query(
                 query_embeddings=[query_embedding],
                 n_results=10,
                 where={"domain": dom},
-                include=["metadatas", "documents", "distances", "embeddings"]
+                include=["metadatas", "documents", "distances"]
             )
             chunks_dom = process_results(results_dom, "knowledge_base", norm_q)
-            kb_chunks.extend(chunks_dom)
-        except Exception as query_err:
-            # Fallback in case a domain filter query errors out
+            # Deduplicate by text
+            existing_texts = {c["text"] for c in kb_chunks}
+            for c in chunks_dom:
+                if c["text"] not in existing_texts:
+                    kb_chunks.append(c)
+                    existing_texts.add(c["text"])
+        except Exception:
             pass
 
     # 4.5 Apply keyword/filename boosts to kb_chunks to improve precision and rank relevant documents first
@@ -225,20 +234,59 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     # RTI Boost
     if any(k in query_lower for k in ["rti", "right to information", "सूचना का अधिकार", "suchna ka adhikar"]):
         for chunk in kb_chunks:
-            if "rti" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.25
+            if "rti" in chunk["source"].lower() or "information" in chunk["source"].lower():
+                chunk["similarity_score"] += 0.35
                 
     # KYC Boost
     if "kyc" in query_lower:
         for chunk in kb_chunks:
             if "kyc" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.25
+                chunk["similarity_score"] += 0.35
                 
     # Consumer Protection Boost
     if any(k in query_lower for k in ["consumer", "upbhokta", "उपभोक्ता", "shikayat", "complaint"]):
         for chunk in kb_chunks:
             if "consumer" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.25
+                chunk["similarity_score"] += 0.35
+
+    # Stomach pain / Abdominal pain / General symptom boost & isolation
+    is_pain_or_fever = any(k in query_lower for k in ["pet", "drd", "dard", "stomach", "pain", "bukhar", "fever", "bcha", "bacha", "child", "vomit", "ulti"])
+    is_sexual_query = any(k in query_lower for k in ["sex", "condom", "youn", "timing", "bdhaye", "pehna", "libido", "erectile", "masturbation"])
+
+    if is_pain_or_fever and not is_sexual_query:
+        # Boost abdominal pain / general symptoms files
+        for chunk in kb_chunks:
+            src_lower = chunk["source"].lower()
+            if "abdominal" in src_lower or "symptoms" in src_lower or "pain" in src_lower:
+                chunk["similarity_score"] += 0.45
+        # Filter out sexual health chunks completely for general symptom queries
+        kb_chunks = [c for c in kb_chunks if "sexual_health" not in c["source"].lower()]
+
+    # Sexual Health Boost
+    if is_sexual_query:
+        for chunk in kb_chunks:
+            src_lower = chunk["source"].lower()
+            if "sexual" in src_lower or "reproductive" in src_lower or "health" in src_lower or "family" in src_lower:
+                chunk["similarity_score"] += 0.35
+            if "masturbation" in query_lower and "masturbation" in src_lower:
+                chunk["similarity_score"] += 0.45
+
+    # 4.6 Language-aware filtering for KB chunks
+    if query_language:
+        if query_language == "English":
+            lang_filtered = [c for c in kb_chunks if "_hi" not in c["source"].lower().split(".")[0][-3:]]
+        elif query_language == "Hindi":
+            lang_filtered = [c for c in kb_chunks if "_en" not in c["source"].lower().split(".")[0][-3:]]
+        elif query_language == "Hinglish":
+            for chunk in kb_chunks:
+                if "hinglish:" in chunk["text"].lower() or "hinglish" in chunk["text"].lower():
+                    chunk["similarity_score"] += 0.25
+            lang_filtered = kb_chunks
+        else:
+            lang_filtered = kb_chunks
+        
+        if lang_filtered:
+            kb_chunks = lang_filtered
 
     # 5. Merge and rank
     # Sort each set descending by similarity score
@@ -246,10 +294,14 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)
     
     # Tiered ranking: user_docs has absolute priority
+    # If user has uploaded documents, cap knowledge base chunks to prevent drowning the user document context.
+    if len(user_chunks) > 0:
+        kb_chunks = kb_chunks[:3]
+        
     merged_chunks = user_chunks + kb_chunks
     
-    # Cap total context chunks to 10
-    final_chunks = merged_chunks[:10]
+    # Cap total context chunks to 5
+    final_chunks = merged_chunks[:5]
     
     # Usage metrics
     user_docs_used = sum(1 for c in final_chunks if c["collection"] == "user_docs")

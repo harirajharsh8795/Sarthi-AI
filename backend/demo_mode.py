@@ -12,6 +12,7 @@ from benchmark_service import benchmark_service
 from deployment_validator import deployment_validator
 from diagnostics import system_diagnostics
 from edge_score import edge_performance_scorecard
+from logger_config import logger
 
 logger = logging.getLogger("saarthi.demo")
 
@@ -22,7 +23,7 @@ class HackathonDemoMode:
     """
     
     def execute_demo_suite(self) -> dict:
-        print("Starting Saarthi AI demo check suite...")
+        logger.debug("Starting Saarthi AI demo check suite...")
         
         # 1. Warmup model
         model_lifecycle_manager.warmup_model()
@@ -51,7 +52,7 @@ class HackathonDemoMode:
                 json.dump(score_res, f, indent=2)
             with open("diagnostics.json", "w") as f:
                 json.dump(diag_res, f, indent=2)
-            print("Successfully dumped edge_score.json and diagnostics.json.")
+            logger.debug("Successfully dumped edge_score.json and diagnostics.json.")
         except Exception as e:
             logger.error(f"Failed to dump demo configurations: {e}")
             
@@ -64,11 +65,11 @@ class HackathonDemoMode:
             "benchmark": bench_res
         }
         
-        print("Demo suite checks complete. Ready for presentation.")
+        logger.debug("Demo suite checks complete. Ready for presentation.")
         return summary
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     demo = HackathonDemoMode()
     res = demo.execute_demo_suite()
-    print(json.dumps(res, indent=2))
+    logger.debug(json.dumps(res, indent=2))

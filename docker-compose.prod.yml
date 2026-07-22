@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: saarthi_backend_prod
+    expose:
+      - "8000"
+    volumes:
+      - ./data:/app/data
+      - ./knowledge_base:/app/knowledge_base
+      - ./backups:/app/backups
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=production
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - MODEL_NAME=${MODEL_NAME:-llama3.2:1b}
+      - CHROMA_PERSIST_DIR=/app/data/chroma_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: saarthi_worker_prod
+    volumes:
+      - ./data:/app/data
+      - ./knowledge_base:/app/knowledge_base
+    environment:
+      - ENVIRONMENT=production
+    depends_on:
+      - backend
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: saarthi_frontend_prod
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: always

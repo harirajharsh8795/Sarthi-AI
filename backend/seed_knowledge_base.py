@@ -1,6 +1,7 @@
 import os
 import time
 import kb_pipeline
+from logger_config import logger
 
 # Seed sources as provided in user request
 SEED_DOCUMENT_SOURCES = [
@@ -175,7 +176,7 @@ SEED_DOCUMENT_SOURCES = [
 ]
 
 def main():
-    print("=== Saarthi AI Stage 0: Knowledge Base Seeding ===")
+    logger.debug("=== Saarthi AI Stage 0: Knowledge Base Seeding ===")
     
     # 1. Initialize folders and SQLite DB
     kb_pipeline.init_directories()
@@ -199,14 +200,14 @@ def main():
         save_dir = os.path.join(kb_pipeline.KB_DIR, domain, language)
         save_path = os.path.join(save_dir, filename)
         
-        print(f"\n--- Processing: {title} ---")
+        logger.debug(f"\n--- Processing: {title} ---")
         
         # Check SQLite db state
         existing_doc = kb_pipeline.get_document_by_url(url)
         
         # Check if file exists and is indexed
         if os.path.exists(save_path) and existing_doc and existing_doc["status"] == "indexed":
-            print(f"Skipping download & index for {filename} (Already exists locally and indexed in SQLite).")
+            logger.debug(f"Skipping download & index for {filename} (Already exists locally and indexed in SQLite).")
             kb_pipeline.upsert_document_record(
                 domain=domain, language=language, filename=filename, source_url=url,
                 discovered_via="seed_list", status="skipped_exists",
@@ -218,14 +219,14 @@ def main():
         
         # If the file already exists locally, we skip downloading but still index it if not indexed
         if os.path.exists(save_path):
-            print(f"File {filename} already exists locally. Skipping download.")
+            logger.debug(f"File {filename} already exists locally. Skipping download.")
             download_success = True
         else:
             # Download file
             download_success = kb_pipeline.download_file(url, save_path, unstable=unstable)
             
             if not download_success:
-                print(f"Failed to download {filename} from {url}.")
+                logger.debug(f"Failed to download {filename} from {url}.")
                 kb_pipeline.upsert_document_record(
                     domain=domain, language=language, filename=filename, source_url=url,
                     discovered_via="seed_list", status="failed"
@@ -234,21 +235,21 @@ def main():
                 
             # Verify BNS Hindi file content
             if filename == "bharatiya_nyaya_sanhita_2023_hi.pdf":
-                print("Checking BNS Hindi PDF content validity...")
+                logger.debug("Checking BNS Hindi PDF content validity...")
                 try:
                     pages_text, detected_lang = kb_pipeline.extract_text_and_language(save_path, "hi")
                     
                     if detected_lang != "hi":
-                        print(f"Warning: BNS Hindi PDF has detected language '{detected_lang}' instead of 'hi'.")
+                        logger.debug(f"Warning: BNS Hindi PDF has detected language '{detected_lang}' instead of 'hi'.")
                         fallback_url = doc["fallback_url"]
-                        print(f"Downloading dedicated Hindi BNS PDF from fallback URL: {fallback_url}")
+                        logger.debug(f"Downloading dedicated Hindi BNS PDF from fallback URL: {fallback_url}")
                         fallback_success = kb_pipeline.download_file(fallback_url, save_path)
                         if fallback_success:
-                            print("Successfully downloaded fallback BNS Hindi PDF.")
+                            logger.debug("Successfully downloaded fallback BNS Hindi PDF.")
                         else:
-                            print("Warning: Failed to download fallback BNS Hindi PDF. Keeping primary file.")
+                            logger.debug("Warning: Failed to download fallback BNS Hindi PDF. Keeping primary file.")
                 except Exception as e:
-                    print(f"Error validating BNS Hindi PDF: {e}")
+                    logger.debug(f"Error validating BNS Hindi PDF: {e}")
             
             # Record download success in SQLite
             now_str = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -263,7 +264,7 @@ def main():
                 domain=domain, language=language, filename=filename, source_url=url,
                 discovered_via="seed_list", file_path=save_path
             )
-            print(f"Indexing finished: {index_status} (Pages: {page_count}, Chunks: {chunk_count})")
+            logger.debug(f"Indexing finished: {index_status} (Pages: {page_count}, Chunks: {chunk_count})")
 
 if __name__ == "__main__":
     main()

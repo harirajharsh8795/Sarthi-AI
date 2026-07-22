@@ -22,7 +22,12 @@ class PromptGuard:
             r"\bstart\s*response\s*with\b",
             r"\bhijack\b",
             r"\bdeveloper\s*mode\b",
-            r"\bplease\s*leak\b"
+            r"\bplease\s*leak\b",
+            r"\bselect\b.*\bfrom\b",
+            r"\bdrop\s+table\b",
+            r"\bdelete\s+from\b",
+            r"<script\b",
+            r"\.\./\.\."
         ]
 
     def scan_query(self, query: str) -> dict:

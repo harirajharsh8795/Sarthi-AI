@@ -21,6 +21,7 @@ export default function InputArea({
   triggerPhotoUpload,
   triggerCameraOpen,
   documentsList, // list of documents to support @mentions
+  onDeleteDocument,
   language
 }) {
   const t = translations[language] || translations.en;
@@ -94,9 +95,16 @@ export default function InputArea({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (isStreaming || transcribing || isRecording || uploadingFile) return;
+    if (transcribing || isRecording || uploadingFile) return;
     if (!input.trim() && !attachedFile) return;
-    onSend();
+    if (isStreaming) {
+      onStopStreaming();
+      setTimeout(() => {
+        onSend();
+      }, 50);
+    } else {
+      onSend();
+    }
   };
 
   const selectMention = (docName) => {
@@ -117,31 +125,7 @@ export default function InputArea({
 
   return (
     <div className="relative w-full max-w-2xl mx-auto flex flex-col space-y-2 animate-slide-up">
-      {/* File Attachment Chip */}
-      {attachedFile && (
-        <div className="flex items-center space-x-2 glass px-3 py-2 rounded-xl text-xs max-w-sm truncate self-start shadow-md animate-fade-in">
-          <svg className="w-4 h-4 text-purple-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4 4a2 2 0 012-2h4.586A1 1 0 0112 2.586L15.414 6A1 1 0 0116 6.586V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-          </svg>
-          <span className="truncate flex-1 font-semibold" style={{ color: "var(--text-primary)" }}>
-            {attachedFile.name}
-          </span>
-          {uploadingFile ? (
-            <svg className="animate-spin h-3.5 w-3.5 text-purple-500" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAttachedFile(null)}
-              className="text-slate-500 hover:text-red-400 transition cursor-pointer border-none bg-transparent p-0"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-      )}
+      {/* Documents are now rendered in the ChatWorkspace messages flow instead of here */}
 
       {/* Mention Dropdown */}
       {showMentionDropdown && filteredDocs.length > 0 && (
@@ -167,15 +151,28 @@ export default function InputArea({
       {/* Input Form Box */}
       <form
         onSubmit={handleSubmit}
-        className="flex items-center space-x-2 bg-white/5 border rounded-2xl p-2 focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500/80 transition duration-150 relative"
+        className="flex flex-col bg-white/5 border rounded-2xl p-2 focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500/80 transition duration-150 relative"
         style={{ borderColor: "var(--border)" }}
       >
+        {/* Attached File Chip */}
+        {attachedFile && (
+          <div className="flex items-center gap-2 px-2 pb-2">
+            <span className="text-purple-400 text-sm">📎</span>
+            <span className="text-sm text-slate-300 truncate max-w-xs">{attachedFile.name}</span>
+            {uploadingFile ? (
+              <span className="text-xs text-purple-400 animate-pulse">Uploading...</span>
+            ) : (
+              <button onClick={() => setAttachedFile(null)} className="text-slate-500 hover:text-red-400 ml-auto bg-transparent border-none cursor-pointer">✕</button>
+            )}
+          </div>
+        )}
+        <div className="flex items-center space-x-2">
         {/* Attachment menu trigger */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setAttachmentMenuOpen(!attachmentMenuOpen)}
-            disabled={isStreaming || uploadingFile}
+            disabled={transcribing || isRecording}
             className="p-2 rounded-xl hover:bg-white/5 transition text-slate-400 hover:text-slate-200 cursor-pointer border-none bg-transparent disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             title={t.addAttachment}
           >
@@ -201,7 +198,7 @@ export default function InputArea({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          disabled={isStreaming || uploadingFile || transcribing || isRecording}
+          disabled={transcribing || isRecording}
           placeholder={
             transcribing
               ? t.transcribing
@@ -217,7 +214,7 @@ export default function InputArea({
         <button
           type="button"
           onClick={toggleRecording}
-          disabled={isStreaming || uploadingFile || transcribing}
+          disabled={transcribing}
           className={`p-2 rounded-xl transition duration-150 flex items-center justify-center cursor-pointer border-none ${
             isRecording
               ? "bg-red-500 text-white animate-pulse"
@@ -236,11 +233,11 @@ export default function InputArea({
         </button>
 
         {/* Send / Stop streaming button */}
-        {isStreaming ? (
+        {isStreaming && !input.trim() ? (
           <button
             type="button"
             onClick={onStopStreaming}
-            className="p-2.5 rounded-full text-white bg-red-500 hover:bg-red-650 flex items-center justify-center transition duration-150 border-none cursor-pointer shadow-md"
+            className="p-2.5 rounded-full text-white bg-red-500 hover:bg-red-600 flex items-center justify-center transition duration-150 border-none cursor-pointer shadow-md"
             title={t.stopBtn}
           >
             <Square size={14} className="fill-current" />
@@ -248,9 +245,9 @@ export default function InputArea({
         ) : (
           <button
             type="submit"
-            disabled={isStreaming || transcribing || isRecording || (!input.trim() && !attachedFile)}
+            disabled={transcribing || isRecording || uploadingFile || (!input.trim() && !attachedFile)}
             className={`p-2.5 rounded-full text-white flex items-center justify-center transition duration-150 border-none cursor-pointer ${
-              isStreaming || transcribing || isRecording || (!input.trim() && !attachedFile)
+              transcribing || isRecording || uploadingFile || (!input.trim() && !attachedFile)
                 ? "bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed"
                 : "bg-gradient-to-r from-purple-600 to-violet-500 hover:from-purple-500 hover:to-violet-400 shadow-md shadow-purple-600/25"
             }`}
@@ -258,6 +255,7 @@ export default function InputArea({
             <Send size={14} />
           </button>
         )}
+        </div>
       </form>
 
       {/* Inline validation errors */}

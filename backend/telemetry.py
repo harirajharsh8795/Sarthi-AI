@@ -73,6 +73,9 @@ def log_inference(
     expanded_query_preview = (expanded_query[:80] + "...") if expanded_query and len(expanded_query) > 80 else (expanded_query or "")
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
+    query_plan_str = json.dumps(query_plan) if isinstance(query_plan, (list, dict)) else query_plan
+    knowledge_graph_str = json.dumps(knowledge_graph) if isinstance(knowledge_graph, (list, dict)) else knowledge_graph
+
     cursor.execute("""
         INSERT INTO inference_telemetry (
             id, session_id, query_preview, expanded_query_preview, response_language,
@@ -88,9 +91,9 @@ def log_inference(
         int(has_context), int(skipped_llm), user_doc_chunks_used, knowledge_base_chunks_used,
         total_chunks_in_prompt, total_tokens_generated, generation_time_ms,
         tokens_per_second, model_name, now_str, intent, detected_domain,
-        rewritten_query, query_plan, confidence_score, confidence_label,
+        rewritten_query, query_plan_str, confidence_score, confidence_label,
         grounding_score, citation_coverage, self_eval_summary, retrieval_mrr,
-        retrieval_ndcg, knowledge_graph
+        retrieval_ndcg, knowledge_graph_str
     ))
     conn.commit()
     conn.close()

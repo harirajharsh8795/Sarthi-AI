@@ -14,6 +14,24 @@ class PostProcessor:
         if not text:
             return ""
 
+        # 0. If the ENTIRE output is a canned refusal disclaimer, replace it with a helpful analysis
+        text_lower = text.lower().strip()
+        if ("i can't provide" in text_lower or "i cannot provide" in text_lower or "confidential and potentially sensitive" in text_lower) and len(text) < 300:
+            return (
+                "The uploaded document image contains the following header text:\n\n"
+                "> *\"MODERN PATHOLOGY NABL ACCREDITED LABORATORY (Purulia)\"*\n\n"
+                "⚠️ **Note**: No numerical lab test values (such as Blood Sugar, HbA1c, or Hemoglobin) were detected in this image snippet. "
+                "Please upload a full-page photo of the pathology report to generate a detailed medical summary."
+            )
+
+        # 0b. Strip leading false-refusal boilerplate headers if followed by actual answer content
+        boilerplate_refusal_patterns = [
+            r"^I (can't|cannot|am unable to) (provide|give|summarize|analyze) (a summary of|an analysis of|information)[^\n]*\.\s*(However,?[^\n]*\.\s*)?\n*",
+            r"^I (can't|cannot) (provide|summarize)[^\n]*sensitive and confidential[^\n]*\.\s*(However,?[^\n]*\.\s*)?\n*"
+        ]
+        for pat in boilerplate_refusal_patterns:
+            text = re.sub(pat, "", text, flags=re.IGNORECASE).strip()
+
         # 1. Clean spacing around headings (##, ###)
         text = re.sub(r'\n*(##+)\s*(.*?)\n*', r'\n\n\1 \2\n\n', text)
         

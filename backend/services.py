@@ -52,6 +52,14 @@ class ChromaManager:
 
     def get_collection(self, name: str):
         client = self.get_client()
+        # Ensure knowledge_base requests map to saarthi_kb if saarthi_kb holds the ingested chunks
+        if name == "knowledge_base":
+            try:
+                saarthi_col = client.get_or_create_collection("saarthi_kb")
+                if saarthi_col.count() > 0:
+                    name = "saarthi_kb"
+            except Exception:
+                pass
         if name not in self._collections:
             with self._lock:
                 if name not in self._collections:

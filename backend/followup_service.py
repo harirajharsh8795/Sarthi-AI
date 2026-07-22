@@ -61,44 +61,8 @@ class FollowupService:
 
     def generate_followups(self, query: str, answer: str, domain: str, language: str) -> list:
         """
-        Generates 3-5 follow-up questions.
-        Uses rule-based fallbacks or lightweight LLM calls.
+        Generates 3-4 follow-up questions rapidly using domain rule sets.
         """
-        # Call local LLM to generate highly contextual follow-ups
-        prompt = (
-            f"User Query: \"{query}\"\n"
-            f"Answer: \"{answer[:500]}\"\n"
-            f"Domain: {domain}\n"
-            f"Language: {language}\n\n"
-            f"Generate 3 short, relevant, and conversation-aware follow-up questions that the user might want to ask next. "
-            f"Respond in the same language. Output ONLY a JSON list of strings, for example: "
-            f"[\"question 1?\", \"question 2?\", \"question 3?\"]\n"
-            f"Do not write conversational text or wrapper, output ONLY the JSON list."
-        )
-
-        try:
-            r = requests.post(
-                settings.OLLAMA_URL,
-                json={
-                    "model": settings.LLM_MODEL_NAME,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.3}
-                },
-                timeout=5
-            )
-            if r.status_code == 200:
-                resp = r.json().get("response", "").strip()
-                json_match = re.search(r'\[.*\]', resp, re.DOTALL)
-                if json_match:
-                    questions = json.loads(json_match.group(0))
-                    if isinstance(questions, list) and len(questions) >= 2:
-                        logger.info(f"Generated follow-up questions: {questions}")
-                        return questions[:4]
-        except Exception as e:
-            logger.warning(f"Failed to generate follow-up questions via LLM: {e}")
-            
-        # Return fallback rule list
         return self.generate_followup_rules(domain, language)
 
 followup_service = FollowupService()

@@ -6,6 +6,7 @@ import urllib.parse
 import requests
 from bs4 import BeautifulSoup
 import kb_pipeline
+from logger_config import logger
 
 # Configuration
 MAX_AUTO_DOCS_PER_DOMAIN = 15  # Default cap of 15 documents per domain
@@ -56,10 +57,10 @@ def extract_pdf_links(page_url):
     
     links = set()
     try:
-        print(f"Fetching page: {page_url}...")
+        logger.debug(f"Fetching page: {page_url}...")
         response = requests.get(page_url, headers=headers, timeout=20)
         if response.status_code != 200:
-            print(f"Failed to fetch starting page. Status: {response.status_code}")
+            logger.debug(f"Failed to fetch starting page. Status: {response.status_code}")
             return links
             
         soup = BeautifulSoup(response.text, "html.parser")
@@ -86,12 +87,12 @@ def extract_pdf_links(page_url):
                 links.add(abs_url)
                 
     except Exception as e:
-        print(f"Error fetching/parsing {page_url}: {e}")
+        logger.debug(f"Error fetching/parsing {page_url}: {e}")
         
     return links
 
 def main():
-    print("=== Saarthi AI Stage 0: Auto-Discovery & KB Expansion ===")
+    logger.debug("=== Saarthi AI Stage 0: Auto-Discovery & KB Expansion ===")
     
     kb_pipeline.init_directories()
     kb_pipeline.init_db()
@@ -107,9 +108,9 @@ def main():
         found_totals.setdefault(domain, 0)
         downloaded_totals.setdefault(domain, 0)
         
-        print(f"\n--- Crawling Start Page for {domain}: {start_url} ---")
+        logger.debug(f"\n--- Crawling Start Page for {domain}: {start_url} ---")
         discovered_links = extract_pdf_links(start_url)
-        print(f"Discovered {len(discovered_links)} potential document links.")
+        logger.debug(f"Discovered {len(discovered_links)} potential document links.")
         
         valid_links = []
         for link in discovered_links:
@@ -127,17 +128,17 @@ def main():
             valid_links.append(link)
             
         found_totals[domain] += len(valid_links)
-        print(f"Filtered to {len(valid_links)} new candidate links (after allowed-domains check and DB de-duplication).")
+        logger.debug(f"Filtered to {len(valid_links)} new candidate links (after allowed-domains check and DB de-duplication).")
         
         # Process new links up to the cap
         download_count = 0
         for link in valid_links:
             # Check cap
             if downloaded_totals[domain] >= MAX_AUTO_DOCS_PER_DOMAIN:
-                print(f"Reached MAX_AUTO_DOCS_PER_DOMAIN limit of {MAX_AUTO_DOCS_PER_DOMAIN} for domain '{domain}'. Skipping further candidates.")
+                logger.debug(f"Reached MAX_AUTO_DOCS_PER_DOMAIN limit of {MAX_AUTO_DOCS_PER_DOMAIN} for domain '{domain}'. Skipping further candidates.")
                 break
                 
-            print(f"\nProcessing candidate link: {link}")
+            logger.debug(f"\nProcessing candidate link: {link}")
             
             # Generate a temporary path to download and inspect language
             url_hash = hashlib.md5(link.encode("utf-8")).hexdigest()
@@ -146,7 +147,7 @@ def main():
             
             success = kb_pipeline.download_file(link, temp_path)
             if not success:
-                print(f"Failed to download candidate: {link}")
+                logger.debug(f"Failed to download candidate: {link}")
                 kb_pipeline.upsert_document_record(
                     domain=domain, language="unknown", filename=temp_filename, source_url=link,
                     discovered_via="auto_crawl", status="failed"
@@ -158,7 +159,7 @@ def main():
                 pages_text, detected_lang = kb_pipeline.extract_text_and_language(temp_path, "unknown")
                 
                 if detected_lang not in ["hi", "en"]:
-                    print(f"Skipping PDF {link} because detected language '{detected_lang}' is neither Hindi ('hi') nor English ('en').")
+                    logger.debug(f"Skipping PDF {link} because detected language '{detected_lang}' is neither Hindi ('hi') nor English ('en').")
                     kb_pipeline.upsert_document_record(
                         domain=domain, language=detected_lang, filename=temp_filename, source_url=link,
                         discovered_via="auto_crawl", status="skipped_unsupported_language"
@@ -189,7 +190,7 @@ def main():
                 if os.path.exists(final_path):
                     os.remove(final_path)
                 os.rename(temp_path, final_path)
-                print(f"Routed document to {final_path} (Detected Lang: {detected_lang})")
+                logger.debug(f"Routed document to {final_path} (Detected Lang: {detected_lang})")
                 
                 # Insert row to SQLite as downloaded
                 now_str = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -203,12 +204,12 @@ def main():
                     domain=domain, language=detected_lang, filename=clean_filename, source_url=link,
                     discovered_via="auto_crawl", file_path=final_path
                 )
-                print(f"Indexed auto-discovered file. Status: {index_status} (Chunks: {chunk_count})")
+                logger.debug(f"Indexed auto-discovered file. Status: {index_status} (Chunks: {chunk_count})")
                 
                 downloaded_totals[domain] += 1
                 
             except Exception as e:
-                print(f"Error processing auto-discovered file: {e}")
+                logger.debug(f"Error processing auto-discovered file: {e}")
                 kb_pipeline.upsert_document_record(
                     domain=domain, language="unknown", filename=temp_filename, source_url=link,
                     discovered_via="auto_crawl", status="failed"
@@ -217,11 +218,11 @@ def main():
                     os.remove(temp_path)
                     
     # Log crawler summary reports to console
-    print("\n==========================================")
-    print("Auto-Discovery Crawler Run Finished.")
+    logger.debug("\n==========================================")
+    logger.debug("Auto-Discovery Crawler Run Finished.")
     for domain in found_totals:
-        print(f"Domain '{domain}': Found {found_totals[domain]} candidates, Downloaded/Indexed {downloaded_totals[domain]} (Cap: {MAX_AUTO_DOCS_PER_DOMAIN})")
-    print("==========================================")
+        logger.debug(f"Domain '{domain}': Found {found_totals[domain]} candidates, Downloaded/Indexed {downloaded_totals[domain]} (Cap: {MAX_AUTO_DOCS_PER_DOMAIN})")
+    logger.debug("==========================================")
 
 if __name__ == "__main__":
     main()

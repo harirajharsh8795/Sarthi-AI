@@ -1,0 +1,227 @@
+[
+  {
+    "id": "b9dcd43a-ecc5-4f57-b312-85b89d83b833",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "tell us about my report and give suggestion",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.3333,
+    "timestamp": "2026-07-02 14:52:36"
+  },
+  {
+    "id": "68bb7dc3-06b3-4759-a6d8-1c4247f55a7d",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "What disease does the patient have?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.9091,
+    "timestamp": "2026-07-02 14:47:51"
+  },
+  {
+    "id": "d4b87502-b76c-401e-a2ae-daba818ceea8",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "How to file RTI application in Uttar Pradesh?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.0,
+    "timestamp": "2026-07-02 14:46:33"
+  },
+  {
+    "id": "e440a904-65e2-43b9-8f53-90a21b790354",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "How to file RTI application in Uttar Pradesh?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.4545,
+    "timestamp": "2026-07-02 14:43:01"
+  },
+  {
+    "id": "bf4d7a37-4a7b-4961-ba8b-ad63a948f72d",
+    "session_id": "test_final_session",
+    "query_preview": "What is this?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.0,
+    "timestamp": "2026-07-02 12:25:42"
+  },
+  {
+    "id": "4d423f83-a912-4927-ac2b-6c7eb4b70c75",
+    "session_id": "test_final_session",
+    "query_preview": "What is this?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.0,
+    "timestamp": "2026-07-02 12:20:46"
+  },
+  {
+    "id": "299a3dd6-98bc-4524-a145-6daa04fdd1bb",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "What is the procedure to file a Right to Information (RTI) application?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.4667,
+    "timestamp": "2026-07-02 12:01:48"
+  },
+  {
+    "id": "7d235103-8d9b-48d7-8664-014df1c3ee6c",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "PM Jan Arogya Yojana\n\nEligibility:\n\n\u091c\u093f\u0928 \u092a\u0930\u093f\u0935\u093e\u0930\u094b\u0902 \u0915\u093e \u0928\u093e\u092e SECC Database \u092e\u0947\u0902 \u0939\u0948\n\u0909\u0928\u0915...",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.7333,
+    "timestamp": "2026-07-02 11:57:12"
+  },
+  {
+    "id": "cfc658fb-a77f-4e54-962f-aed60e27488d",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "Mujhe KYC ke liye kya kya documents chahiye?",
+    "intent": "QA",
+    "has_context": 1,
+    "grounding_score": 0.8148,
+    "timestamp": "2026-07-02 11:55:47"
+  },
+  {
+    "id": "74bee1b4-8502-4c5a-b3f6-191308d4c539",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "explain my report ",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.6429,
+    "timestamp": "2026-07-02 11:54:34"
+  },
+  {
+    "id": "fec05c90-b90c-4143-bf25-f8762ad476e0",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "explain me",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": null,
+    "timestamp": "2026-07-02 11:53:34"
+  },
+  {
+    "id": "7f5f5b36-3ce4-40d6-95be-404699492e2a",
+    "session_id": "test_session_2",
+    "query_preview": "What is in the image?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.0,
+    "timestamp": "2026-07-02 11:16:33"
+  },
+  {
+    "id": "b37207ef-db3a-43da-9287-06e2bba4c9d2",
+    "session_id": "usr_mnk0nk2q",
+    "query_preview": "Dengue fever symptoms and primary treatment guidelines?",
+    "intent": "QA",
+    "has_context": 1,
+    "grounding_score": 0.7895,
+    "timestamp": "2026-07-02 10:55:03"
+  },
+  {
+    "id": "1995f93e-10a0-4ef4-a5b5-ef5550554f1d",
+    "session_id": "usr_27f7n6sq",
+    "query_preview": "Hello from Playwright!",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": null,
+    "timestamp": "2026-07-02 09:56:20"
+  },
+  {
+    "id": "7ea0b6b9-63b8-4086-96cb-dafb50b4bace",
+    "session_id": "session_25dbfa9d",
+    "query_preview": "What is the interest rate for an SBI home loan?",
+    "intent": "QA",
+    "has_context": 1,
+    "grounding_score": 0.2727,
+    "timestamp": "2026-07-02 09:47:49"
+  },
+  {
+    "id": "9ff28721-f89d-4f88-9e81-8f5747c4920a",
+    "session_id": "session_25dbfa9d",
+    "query_preview": "How do I file an RTI for road construction in my area?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.2308,
+    "timestamp": "2026-07-02 09:47:26"
+  },
+  {
+    "id": "f960427a-33ac-40e2-b057-c403c94cd978",
+    "session_id": "session_25dbfa9d",
+    "query_preview": "Can I get bail for a non-bailable offense?",
+    "intent": "QA",
+    "has_context": 1,
+    "grounding_score": 1.0,
+    "timestamp": "2026-07-02 09:46:57"
+  },
+  {
+    "id": "ee395d08-35bd-4614-ae0b-f486071f6dc0",
+    "session_id": "session_25dbfa9d",
+    "query_preview": "Main apne PF account ka balance kaise check karu?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.8182,
+    "timestamp": "2026-07-02 09:46:20"
+  },
+  {
+    "id": "7f50295f-d207-4ca8-abc3-a0cdc54186c3",
+    "session_id": "session_25dbfa9d",
+    "query_preview": "\u092e\u0941\u091d\u0947 \u092c\u0941\u0916\u093e\u0930 \u0914\u0930 \u0938\u093f\u0930\u0926\u0930\u094d\u0926 \u0939\u0948, \u0915\u094c\u0928 \u0938\u0940 \u0926\u0935\u093e \u0932\u0947\u0928\u0940 \u091a\u093e\u0939\u093f\u090f?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.0,
+    "timestamp": "2026-07-02 09:45:58"
+  },
+  {
+    "id": "6034dee5-23ef-4776-a7d3-0c370a5e6768",
+    "session_id": "session_25dbfa9d",
+    "query_preview": "My bank deducted 5000 Rs without my permission. What should I do?",
+    "intent": "QA",
+    "has_context": 1,
+    "grounding_score": 0.75,
+    "timestamp": "2026-07-02 09:45:29"
+  },
+  {
+    "id": "50c4d55b-2961-48a9-8561-cb66588a250a",
+    "session_id": "session_25dbfa9d",
+    "query_preview": "What are my rights if police arrest me?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 0.9412,
+    "timestamp": "2026-07-02 09:45:05"
+  },
+  {
+    "id": "231547be-3fad-4791-abc1-36ea821b51aa",
+    "session_id": "session_c7c4efbd",
+    "query_preview": "My bank deducted 5000 Rs without my permission. What should I do?",
+    "intent": "QA",
+    "has_context": 1,
+    "grounding_score": 0.6364,
+    "timestamp": "2026-07-02 09:38:52"
+  },
+  {
+    "id": "1d452290-f258-4283-8d38-9956bf609895",
+    "session_id": "session_c7c4efbd",
+    "query_preview": "What are my rights if police arrest me?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": 1.0,
+    "timestamp": "2026-07-02 09:38:27"
+  },
+  {
+    "id": "ef99b9dc-9125-49ba-8f52-13b1d9b89593",
+    "session_id": "session_0ef2e686",
+    "query_preview": "Hello, what can you do?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": null,
+    "timestamp": "2026-07-02 05:59:39"
+  },
+  {
+    "id": "77bc596f-e02e-46eb-b920-60d431c4ba1d",
+    "session_id": "session_56e45e1a",
+    "query_preview": "Hello, what can you do?",
+    "intent": "QA",
+    "has_context": 0,
+    "grounding_score": null,
+    "timestamp": "2026-07-02 03:39:01"
+  }
+]

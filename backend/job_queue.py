@@ -96,7 +96,16 @@ class JobQueueManager:
 
     def submit_task(self, fn, *args, **kwargs):
         """Submits task function to thread pool."""
-        return self.executor.submit(fn, *args, **kwargs)
+        future = self.executor.submit(fn, *args, **kwargs)
+        
+        def handle_future_error(f):
+            try:
+                f.result()
+            except Exception as e:
+                logger.error(f"Background task crashed with error: {e}", exc_info=True)
+                
+        future.add_done_callback(handle_future_error)
+        return future
 
     def shutdown(self):
         """Shutdown helper to cancel pending tasks and release workers."""

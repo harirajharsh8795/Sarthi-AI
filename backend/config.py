@@ -1,5 +1,7 @@
 import os
 from pydantic import BaseModel, HttpUrl, ValidationError
+import logging
+logger = logging.getLogger("saarthi")
 
 class Settings(BaseModel):
     # Paths configuration
@@ -58,15 +60,15 @@ def load_settings() -> Settings:
             try:
                 os.makedirs(folder_path, exist_ok=True)
             except Exception as pe:
-                print(f"WARNING: Configuration path {folder_path} is not writable: {pe}")
+                logger.debug(f"WARNING: Configuration path {folder_path} is not writable: {pe}")
                 
         # 2. Secret checks
         if "key" in settings.OLLAMA_URL.lower():
-            print("WARNING: Secret key pattern detected in Ollama connection endpoint URL.")
+            logger.debug("WARNING: Secret key pattern detected in Ollama connection endpoint URL.")
             
         return settings
     except ValidationError as e:
-        print(f"Configuration validation failed: {e}")
+        logger.debug(f"Configuration validation failed: {e}")
         return Settings()
 
 # Singleton configuration instance
