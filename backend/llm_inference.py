@@ -175,8 +175,8 @@ def _generate_answer_stream_inner(
         )
         return
 
-    # Limit context chunks to top 2 for maximum inference speed and precision
-    context_chunks = context_chunks[:2]
+    # Limit context chunks to top 4 for optimal grounding and inference speed
+    context_chunks = context_chunks[:4]
 
     # 5. Knowledge Graph Triples extraction
     start_graph = time.perf_counter()

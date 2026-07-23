@@ -90,9 +90,8 @@ class RankingService:
         relevant_retrieved = sum(relevance_vector)
         precision = relevant_retrieved / n if n > 0 else 0.0
         
-        # 2. Recall@K (estimated assuming at least relevant_retrieved exists in total database)
-        total_relevant_in_db = max(1, relevant_retrieved)
-        recall = relevant_retrieved / total_relevant_in_db
+        # 2. Recall@K (ratio of relevant retrieved items against target retrieval batch size)
+        recall = precision
         
         # 3. MRR (Mean Reciprocal Rank)
         mrr = 0.0

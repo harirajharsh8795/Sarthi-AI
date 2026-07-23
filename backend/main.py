@@ -188,7 +188,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 
 # Versioned router
-v1_router = APIRouter(prefix="/api/v1")
+v1_router = APIRouter()
 
 whisper_model = None
 
@@ -868,133 +868,9 @@ def inspect_telemetry(inference_id: str):
         raise SaarthiError("SAARTHI_DB_ERROR", "Failed to retrieve inspection trace.")
 
 
-# Include routers and register root aliases for backward compatibility
-app.include_router(v1_router)
-
-# ALIAS REGISTER DIRECT MAP
-@app.post("/api/session")
-def alias_create_session(request: SessionRequest = SessionRequest()):
-    return create_session(request)
-
-@app.post("/api/upload")
-def alias_upload_document(request: Request, file: UploadFile = File(...), session_id: str = Form(...), conversation_id: Optional[str] = Form(None)):
-    return upload_document(request, file, session_id, conversation_id)
-
-@app.get("/api/uploads/{job_id}")
-def alias_get_job_status(job_id: str):
-    return get_job_status(job_id)
-
-@app.get("/api/stream")
-def alias_generate_stream(request: Request, query: str, session_id: str, conversation_id: Optional[str] = None, response_language: Optional[str] = None):
-    return generate_stream(request, query, session_id, conversation_id, response_language)
-
-@app.get("/api/history")
-def alias_get_session_history(session_id: str, conversation_id: Optional[str] = None):
-    return get_session_history(session_id, conversation_id)
-
-@app.get("/api/telemetry")
-def alias_get_telemetry():
-    return get_telemetry()
-
-@app.post("/api/voice/transcribe")
-async def alias_transcribe_audio(audio: UploadFile = File(...), lang: Optional[str] = Form(None)):
-    return await transcribe_audio(audio, lang)
-
-@app.post("/api/voice/speak")
-async def alias_speak_text(request: SpeakRequest, background_tasks: BackgroundTasks):
-    return await speak_text(request, background_tasks)
-
-@app.post("/api/conversations")
-def alias_create_new_conversation(req: ConversationCreate):
-    return create_new_conversation(req)
-
-@app.get("/api/conversations/all")
-def alias_get_all_conversations(device_id: str):
-    return get_all_conversations(device_id)
-
-@app.get("/api/conversations")
-def alias_get_conversations(session_id: str):
-    return get_conversations(session_id)
-
-@app.get("/api/conversations/{conversation_id}/messages")
-def alias_get_conversation_messages(conversation_id: str):
-    return get_conversation_messages(conversation_id)
-
-@app.delete("/api/conversations/{conversation_id}")
-def alias_delete_conversation(conversation_id: str, session_id: str):
-    return delete_conversation(conversation_id, session_id)
-
-@app.put("/api/conversations/{conversation_id}")
-def alias_update_conversation(conversation_id: str, req: ConversationUpdate):
-    return update_conversation(conversation_id, req)
-
-@app.delete("/api/conversations/{conversation_id}/messages/{message_id}")
-def alias_delete_messages_from(conversation_id: str, message_id: str):
-    return delete_messages_from(conversation_id, message_id)
-
-@app.get("/api/search/messages")
-def alias_search_messages(session_id: str, q: str):
-    return search_messages(session_id, q)
-
-@app.delete("/api/document/{document_id}")
-def alias_delete_document(document_id: str, session_id: str):
-    return delete_document(document_id, session_id)
-
-@app.get("/api/health")
-def alias_health_check():
-    return health_check()
-
-@app.get("/api/telemetry/{inference_id}/inspect")
-def alias_inspect_telemetry(inference_id: str):
-    return inspect_telemetry(inference_id)
-
-@app.get("/api/system/health")
-def alias_get_system_health():
-    return get_system_health()
-
-@app.get("/api/system/resources")
-def alias_get_system_resources():
-    return get_system_resources()
-
-@app.get("/api/system/cache")
-def alias_get_system_cache():
-    return get_system_cache()
-
-@app.get("/api/system/performance")
-def alias_get_system_performance():
-    return get_system_performance()
-
-@app.get("/api/system/deployment")
-def alias_get_system_deployment():
-    return get_system_deployment()
-
-@app.get("/api/system/diagnostics")
-def alias_get_system_diagnostics():
-    return get_system_diagnostics()
-
-@app.get("/api/observability")
-def alias_get_system_observability():
-    return get_system_observability()
-
-@app.get("/api/security/status")
-def alias_get_security_status():
-    return get_security_status()
-
-@app.get("/api/security/audit")
-def alias_get_security_audit():
-    return get_security_audit()
-
-@app.get("/api/security/compliance")
-def alias_get_security_compliance():
-    return get_security_compliance()
-
-@app.get("/api/security/trust")
-def alias_get_security_trust():
-    return get_security_trust()
-
-@app.get("/api/security/production")
-def alias_get_security_production():
-    return get_security_production()
+# Include routers for both /api/v1 and legacy /api endpoints
+app.include_router(v1_router, prefix="/api/v1")
+app.include_router(v1_router, prefix="/api")
 
 
 # 4. Static Single-Page App Mounting Fallback
