@@ -7,7 +7,7 @@ import CameraModal from "../chat/CameraModal";
 import TypingIndicator from "../chat/TypingIndicator";
 import { translations } from "../../utils/localization";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function ChatWorkspace({
   sessionId,
@@ -23,7 +23,8 @@ export default function ChatWorkspace({
   documentsList,
   onDeleteDocument,
   onConversationCreated,
-  newChatTrigger
+  newChatTrigger,
+  onToggleMobileSidebar
 }) {
   const t = translations[language] || translations.en;
   
@@ -586,6 +587,7 @@ export default function ChatWorkspace({
         onRenameConversation={onRenameConversation}
         documentsCount={documentsList ? documentsList.length : 0}
         language={language}
+        onToggleMobileSidebar={onToggleMobileSidebar}
       />
 
       {/* Messages area wrapper */}
@@ -700,15 +702,6 @@ export default function ChatWorkspace({
         language={language}
       />
 
-      {/* Scroll bottom FAB */}
-      {showScrollBottom && (
-        <button
-          onClick={() => scrollToBottom()}
-          className="absolute bottom-20 right-8 p-2 rounded-full shadow-lg cursor-pointer border-none bg-purple-600 hover:bg-purple-500 text-white transition hover:scale-105 active:scale-95"
-        >
-          <ArrowDown size={18} />
-        </button>
-      )}
     </div>
   );
 }

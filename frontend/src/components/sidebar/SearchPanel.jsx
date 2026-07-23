@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Search, MessageSquare, FileText, ChevronRight } from "lucide-react";
 import { translations } from "../../utils/localization";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function SearchPanel({ 
   language, 

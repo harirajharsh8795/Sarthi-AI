@@ -6,7 +6,7 @@ import {
 import { translations } from "../../utils/localization";
 import MarkdownRenderer from "./MarkdownRenderer";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function MessageBubble({ 
   message, 
@@ -289,9 +289,9 @@ export default function MessageBubble({
               </div>
             )}
 
-            {/* Bubble Action Bar (Fades in on hover) */}
+            {/* Bubble Action Bar (Always visible on touch, fades in on desktop hover) */}
             <div 
-              className={`absolute top-0 right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+              className={`absolute top-0 right-0 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 ${
                 isUser ? "-translate-y-full pb-1" : ""
               }`}
             >

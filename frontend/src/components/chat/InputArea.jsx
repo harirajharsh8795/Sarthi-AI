@@ -65,7 +65,33 @@ export default function InputArea({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [mentionIndex, setMentionIndex] = useState(0);
+
   const handleKeyDown = (e) => {
+    if (showMentionDropdown && filteredDocs.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % filteredDocs.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + filteredDocs.length) % filteredDocs.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        if (filteredDocs[mentionIndex]) {
+          selectMention(filteredDocs[mentionIndex].original_filename);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setShowMentionDropdown(false);
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
@@ -134,14 +160,17 @@ export default function InputArea({
           className="absolute bottom-16 left-2 w-64 glass-strong rounded-xl shadow-xl max-h-48 overflow-y-auto z-30 py-1 text-left border"
           style={{ borderColor: "var(--border)" }}
         >
-          {filteredDocs.map((doc) => (
+          {filteredDocs.map((doc, idx) => (
             <button
               key={doc.document_id}
               onClick={() => selectMention(doc.original_filename)}
-              className="w-full px-3 py-2 text-xs font-medium cursor-pointer border-none text-left flex items-center gap-2 hover:bg-white/5 transition"
-              style={{ color: "var(--text-primary)" }}
+              onMouseEnter={() => setMentionIndex(idx)}
+              className={`w-full px-3 py-2 text-xs font-medium cursor-pointer border-none text-left flex items-center gap-2 transition ${
+                idx === mentionIndex ? "bg-purple-500/20 text-purple-300 font-bold" : "hover:bg-white/5"
+              }`}
+              style={{ color: idx === mentionIndex ? "var(--accent)" : "var(--text-primary)" }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              <span className={`w-1.5 h-1.5 rounded-full ${idx === mentionIndex ? "bg-purple-400" : "bg-purple-500/60"}`} />
               <span className="truncate">{doc.original_filename}</span>
             </button>
           ))}

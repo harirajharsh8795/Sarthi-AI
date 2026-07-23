@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Edit3, Check, X, FileText } from "lucide-react";
+import { Edit3, Check, X, FileText, Menu } from "lucide-react";
 import { translations } from "../../utils/localization";
 
 export default function ChatHeader({
@@ -7,7 +7,8 @@ export default function ChatHeader({
   conversations,
   onRenameConversation,
   documentsCount,
-  language
+  language,
+  onToggleMobileSidebar
 }) {
   const t = translations[language] || translations.en;
   
@@ -30,11 +31,20 @@ export default function ChatHeader({
 
   return (
     <header
-      className="h-14 px-6 flex justify-between items-center flex-shrink-0 transition-colors duration-150 glass border-b z-10"
+      className="h-14 px-4 md:px-6 flex justify-between items-center flex-shrink-0 transition-colors duration-150 glass border-b z-10"
       style={{ borderColor: "var(--border)" }}
     >
-      {/* Left: Breadcrumbs / Editable Title */}
+      {/* Left: Hamburger menu (mobile) + Breadcrumbs / Editable Title */}
       <div className="flex items-center gap-2">
+        <button
+          onClick={onToggleMobileSidebar}
+          className="md:hidden p-1.5 rounded-lg border hover:bg-white/10 text-white/80 cursor-pointer"
+          style={{ borderColor: "var(--border)" }}
+          title="Open Menu"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
+
         <span className="text-[10px] font-bold tracking-wider" style={{ color: "var(--text-muted)" }}>
           SAARTHI AI
         </span>

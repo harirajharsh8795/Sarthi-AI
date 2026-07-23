@@ -9,7 +9,7 @@ import { useTheme } from "./hooks/useTheme";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { translations } from "./utils/localization";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function App() {
   const [view, setView] = useState("app");
@@ -24,6 +24,7 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   const [newChatTrigger, setNewChatTrigger] = useState(0);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Theme & Language states
   const { theme, toggleTheme } = useTheme();
@@ -279,8 +280,14 @@ export default function App() {
       <Sidebar
         conversations={conversations}
         activeConversationId={activeConversationId}
-        onConversationClick={handleConversationClick}
-        onNewChat={handleNewChat}
+        onConversationClick={(id) => {
+          handleConversationClick(id);
+          setIsMobileSidebarOpen(false);
+        }}
+        onNewChat={() => {
+          handleNewChat();
+          setIsMobileSidebarOpen(false);
+        }}
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
         sessionId={masterSessionId}
@@ -292,6 +299,8 @@ export default function App() {
         toggleTheme={toggleTheme}
         documentsList={documentsList}
         onBackToLanding={() => setView("landing")}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Workspace chat panel */}
@@ -315,6 +324,7 @@ export default function App() {
             fetchConversations();
           }}
           newChatTrigger={newChatTrigger}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
         />
       </main>
 

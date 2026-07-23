@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Sun, Moon, FileText, BarChart3, ChevronDown, ChevronUp, Brain } from "lucide-react";
+import { Plus, Sun, Moon, FileText, BarChart3, ChevronDown, ChevronUp, Brain, X } from "lucide-react";
 import SearchPanel from "../sidebar/SearchPanel";
 import ConversationList from "../ConversationList";
 import SystemStats from "../sidebar/SystemStats";
@@ -20,42 +20,62 @@ export default function Sidebar({
   theme,
   toggleTheme,
   documentsList,
-  onBackToLanding
+  onBackToLanding,
+  isMobileOpen,
+  onCloseMobile
 }) {
   const t = translations[language] || translations.en;
 
   const [statsExpanded, setStatsExpanded] = useState(false);
 
   return (
-    <aside
-      className="w-[280px] border-r flex flex-col h-full flex-shrink-0 select-none z-10 animate-fade-in"
-      style={{
-        background: "var(--bg-secondary)",
-        borderColor: "var(--border)"
-      }}
-    >
-      {/* 1. Logo Header */}
-      <div 
-        onClick={onBackToLanding}
-        className="p-4 flex items-center justify-between border-b cursor-pointer hover:bg-white/[0.03] transition group" 
-        style={{ borderColor: "var(--border)" }}
-        title="Back to Landing Page"
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div 
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden animate-fade-in"
+        />
+      )}
+      
+      <aside
+        className={`w-[280px] border-r flex flex-col h-full flex-shrink-0 select-none z-40 transition-transform duration-300 md:static fixed inset-y-0 left-0 ${
+          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+        style={{
+          background: "var(--bg-secondary)",
+          borderColor: "var(--border)"
+        }}
       >
-        <div className="flex items-center gap-2">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform"
-            style={{ background: "var(--accent-gradient)" }}
-          >
-            <Brain className="w-4 h-4 text-white" />
+        {/* 1. Logo Header */}
+        <div 
+          className="p-4 flex items-center justify-between border-b cursor-pointer hover:bg-white/[0.03] transition group" 
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div onClick={onBackToLanding} className="flex items-center gap-2" title="Back to Landing Page">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform"
+              style={{ background: "var(--accent-gradient)" }}
+            >
+              <Brain className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xs font-black tracking-tight text-gradient">
+              {t.appTitle}
+            </span>
           </div>
-          <span className="text-xs font-black tracking-tight text-gradient">
-            {t.appTitle}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="badge badge-success text-[8px] font-bold">
+              {language === "hi" ? "ऑफलाइन" : "Offline"}
+            </span>
+            {/* Close button for mobile */}
+            <button 
+              onClick={onCloseMobile}
+              className="md:hidden p-1 rounded hover:bg-white/10 text-white/70"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        <span className="badge badge-success text-[8px] font-bold">
-          {language === "hi" ? "ऑफलाइन" : "Offline"}
-        </span>
-      </div>
 
       {/* 2. Actions (New Chat) */}
       <div className="p-3">
@@ -133,5 +153,6 @@ export default function Sidebar({
         </button>
       </div>
     </aside>
-  );
+  </>
+);
 }

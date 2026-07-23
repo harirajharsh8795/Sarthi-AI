@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { translations } from "../../utils/localization";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function DocumentPanel({ sessionId, conversationId, refreshTrigger, language }) {
   const t = translations[language] || translations.en;

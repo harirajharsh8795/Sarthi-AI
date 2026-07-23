@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BarChart3, Wifi, Cpu, Database, Compass, FileText, Zap } from "lucide-react";
 import { translations } from "../../utils/localization";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function SystemStats({ sessionId, conversationId, documentsCount, language }) {
   const t = translations[language] || translations.en;
