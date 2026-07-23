@@ -1,7 +1,7 @@
 # ⚡ Saarthi AI — Edge Cognitive Offline RAG Assistant
 
-![Track 2 RAG](https://img.shields.io/badge/Track-Track%202%20Intelligent%20Document%20Brain-blue)
-![Hardware](https://img.shields.io/badge/Hardware-NVIDIA%20Jetson%20Orin%20Nano-76B900?logo=nvidia)
+![Architecture](https://img.shields.io/badge/Architecture-Hybrid%20RAG-blue)
+![Hardware](https://img.shields.io/badge/Hardware-NVIDIA%20Jetson%20Orin-76B900?logo=nvidia)
 ![Model](https://img.shields.io/badge/SLM-Llama%203.2%201B-purple)
 ![Offline](https://img.shields.io/badge/Deployment-100%25%20Offline%20First-success)
 ![Backend](https://img.shields.io/badge/Backend-Python%20FastAPI-009688?logo=fastapi)
@@ -26,12 +26,12 @@
 
 | Domain | Document Count | Key Sources & Coverage |
 |---|---|---|
-| **Banking** | 70+ Documents | RBI Master Directions, KYC Guidelines, Foreclosure Norms, Priority Sector Lending, Grievance Redressal |
-| **Legal** | 15+ Documents | Bharatiya Nagarik Suraksha Sanhita (BNSS 2023), Bharatiya Nyaya Sanhita (BNS 2023), RTI Act 2005, Consumer Protection Act 2019, Motor Vehicles Act |
-| **Medical** | 10+ Documents | National Health Mission (NHM) Standard Treatment Guidelines for Fever, Malaria, Dengue, TB, Typhoid, Hypertension, Diabetes & ICMR 2019 Clinical Guidelines |
-| **Constitutional** | 2 Documents | Constitution of India (Complete English & Hindi Official Versions) |
+| **Banking** | **97 Documents** | RBI Master Directions, KYC Guidelines, Foreclosure Norms, Priority Sector Lending, Grievance Redressal, Loan Guidelines |
+| **Legal** | **112 Documents** | Bharatiya Nagarik Suraksha Sanhita (BNSS 2023), Bharatiya Nyaya Sanhita (BNS 2023), Bharatiya Sakshya Adhiniyam (BSA 2023), RTI Act 2005, Consumer Protection Act 2019, Motor Vehicles Act, Labour Laws |
+| **Medical** | **129 Documents** | National Health Mission (NHM) Standard Treatment Guidelines for Fever, Malaria, Dengue, TB, Typhoid, Diabetes, Hypertension, Cardiac, Chronic, Mental Health, Sexual Health & ICMR Guidelines |
+| **Common & Constitutional** | **15 Documents** | Ayushman Bharat PM-JAY, PM-Kisan, Cyber Safety Guidelines, Constitution of India (Complete English & Hindi Official Versions) |
 
-**Total: 10,338+ chunks indexed. Hindi + English. Multilingual cross-lingual retrieval.**
+**Total: 353 documents (2,714 chunks indexed). Hindi + English. Multilingual cross-lingual retrieval.**
 
 ---
 
@@ -59,27 +59,63 @@
 ## 🏗️ System Architecture
 
 ```text
-User Query (Hindi / English / Hinglish)
-           ↓
-  Hinglish Glossary Expansion
-  bukhar → fever, pyrexia, febrile
-  177 colloquial term mappings
-           ↓
-  Multilingual Embedding Model
-  (paraphrase-multilingual-mpnet-base-v2)
-           ↓
-  ┌─────────────────┬──────────────────────┐
-  │   user_docs     │   knowledge_base     │
-  │ (your uploads)  │ RBI, RTI, NHM, BNSS  │
-  │ score ≥ 0.50   │ score ≥ 0.35         │
-  └────────┬────────┴──────────┬───────────┘
-           └────────┬──────────┘
-             Tiered Merge + Domain Check
-                     ↓
-          Llama 3.2 1B via Ollama
-          (temperature 0.1, grounded)
-                     ↓
-     Streaming Answer + Page Citations
+               ┌─────────────────────────────────────────────────────────┐
+               │           User Interface (React 18 + Vite)              │
+               │      Voice Input (STT)  │  Text Input (Hindi/English)   │
+               └────────────────────────────┬────────────────────────────┘
+                                            │
+                                            ▼
+               ┌─────────────────────────────────────────────────────────┐
+               │              FastAPI Backend Gateway                    │
+               │   • Prompt Guard Security  • PII Anonymization Engine   │
+               └────────────────────────────┬────────────────────────────┘
+                                            │
+                                            ▼
+               ┌─────────────────────────────────────────────────────────┐
+               │             Query Enhancement Subsystem                 │
+               │   • 177 Hinglish Dictionary Expansion (bukhar → fever)  │
+               │   • Contextual Query Rewriter & Intent Routing          │
+               └────────────────────────────┬────────────────────────────┘
+                                            │
+                                            ▼
+               ┌─────────────────────────────────────────────────────────┐
+               │         Multilingual Sentence Embedding Engine          │
+               │       (paraphrase-multilingual-mpnet-base-v2)           │
+               └────────────────────────────┬────────────────────────────┘
+                                            │
+                      ┌─────────────────────┴─────────────────────┐
+                      ▼                                           ▼
+       ┌─────────────────────────────┐             ┌─────────────────────────────┐
+       │   user_docs Vector Index    │             │   saarthi_kb Vector Index   │
+       │   (Session-Isolated Uploads)│             │ (353 Sovereign KB Documents)│
+       │     Threshold: score ≥ 0.50 │             │    Threshold: score ≥ 0.35  │
+       └──────────────┬──────────────┘             └──────────────┬──────────────┘
+                      └─────────────────────┬─────────────────────┘
+                                            │
+                                            ▼
+               ┌─────────────────────────────────────────────────────────┐
+               │           Context Processing & Reranking                │
+               │   • Tiered Context Merge   • Relevance Reranker         │
+               │   • Context Compression    • Grounding Verification     │
+               └────────────────────────────┬────────────────────────────┘
+                                            │
+                                            ▼
+               ┌─────────────────────────────────────────────────────────┐
+               │              Local SLM Generation Engine                │
+               │       Llama 3.2 1B via Ollama API (num_ctx: 1024)       │
+               └────────────────────────────┬────────────────────────────┘
+                                            │
+                                            ▼
+               ┌─────────────────────────────────────────────────────────┐
+               │           Post-Processing & Output Pipeline             │
+               │   • Citation Mapper        • Layout Formatting          │
+               │   • Grounding Confidence   • Speech Output (TTS)        │
+               └────────────────────────────┬────────────────────────────┘
+                                            │
+                                            ▼
+               ┌─────────────────────────────────────────────────────────┐
+               │            Streamed Response to End User                │
+               └─────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -169,16 +205,6 @@ npm run dev
 ## 📌 NVIDIA Jetson Orin Deployment Notes
 
 - **PyTorch Preservation**: On Jetson JetPack environment, install OpenAI Whisper with `--no-deps` flag (`pip install openai-whisper --no-deps`) to prevent pip from overwriting JetPack-optimized PyTorch binaries.
-- **Pre-download Models**: Ensure Whisper `tiny` and `paraphrase-multilingual-mpnet-base-v2` are pre-cached before your live demo slot to ensure 100% offline execution.
+- **Pre-download Models**: Ensure Whisper `tiny` and `paraphrase-multilingual-mpnet-base-v2` are pre-cached before your live demo to ensure 100% offline execution.
 - **Speech Synthesis**: Install `espeak` (`sudo apt install -y espeak`) for `pyttsx3` Linux audio generation.
 - **Network Access**: Access the web interface from any device on the same local network using `http://<JETSON_IP>:5173`.
-
----
-
-## 🏆 Hackathon Details
-
-- **Event**: EDGEMINDS Internship 2026
-- **Track**: Track 2 — Intelligent Document Brain RAG
-- **Hardware**: NVIDIA Jetson Orin Nano
-- **Submission Date**: July 12, 2026
-- **Demo Day**: July 14-15, 2026
