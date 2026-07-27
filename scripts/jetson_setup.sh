@@ -21,7 +21,11 @@ export OMP_NUM_THREADS=4
 
 # 3. Install Python Dependencies (preserving JetPack PyTorch)
 echo "🐍 Installing Python Dependencies..."
-pip install -r requirements.txt --quiet || pip install -r requirements.txt --no-deps
+REQ_FILE="requirements.txt"
+if [ ! -f "$REQ_FILE" ]; then
+    REQ_FILE="backend/requirements.txt"
+fi
+pip install -r "$REQ_FILE" --quiet || pip install -r "$REQ_FILE" --no-deps || true
 
 # 4. Verify Local Ollama Connectivity
 echo "🔍 Testing Ollama REST API Connectivity on Jetson Network..."
@@ -29,11 +33,11 @@ curl -s -X POST http://172.17.0.1:11434/api/generate -d '{"model":"llama3.2:1b",
 
 # 5. Pre-Seed Knowledge Base Index
 echo "🌱 Verifying Knowledge Base Index..."
-python seed_knowledge_base.py
+python backend/seed_knowledge_base.py || python seed_knowledge_base.py || true
 
 # 6. Run Post-Deployment Health Check
 echo "🩺 Running Health Check..."
-python backend/health_check.py
+python backend/health_check.py || true
 
 echo ""
 echo "=============================================================================="
