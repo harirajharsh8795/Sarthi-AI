@@ -8,10 +8,10 @@ set -e
 
 echo "🚀 Starting Saarthi AI Jetson Nano Setup..."
 
-# 1. System Package Installation
-echo "📦 Installing system dependencies (espeak, ffmpeg, tesseract)..."
-sudo apt-get update -qq
-sudo apt-get install -y -qq espeak ffmpeg tesseract-ocr tesseract-ocr-hin portaudio19-dev python3-pyaudio
+# 1. System Package Installation (Non-blocking if non-root)
+echo "📦 Checking system dependencies..."
+sudo -n apt-get update -qq 2>/dev/null || true
+sudo -n apt-get install -y -qq espeak ffmpeg tesseract-ocr tesseract-ocr-hin portaudio19-dev python3-pyaudio 2>/dev/null || true
 
 # 2. Configure Environment Variables for Jetson Ollama Container
 echo "⚙️ Configuring Environment Variables..."
