@@ -4,6 +4,17 @@ langdetect>=1.0.9
 python-docx>=0.8.11
 pytesseract>=0.3.10
 pillow>=9.5.0
+transformers>=4.30.0,<4.45.0
 sentence-transformers>=2.2.2
 requests>=2.28.0
 tqdm>=4.64.0
+fastapi>=0.100.0
+uvicorn>=0.22.0
+python-multipart>=0.0.6
+openai-whisper
+pyttsx3
+soundfile
+pydantic
+psutil
+numpy
+easyocr>=1.6.0

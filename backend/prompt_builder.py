@@ -2,6 +2,48 @@ import logging
 
 logger = logging.getLogger("saarthi.prompt")
 
+# Internal-only Hinglish decode map — used to translate query before answering.
+# The LLM should NEVER output these Hindi romanized words back to the user.
+_HINGLISH_DECODE = {
+    "pet dard": "stomach pain",
+    "pet drd": "stomach pain",
+    "pait dard": "stomach pain",
+    "sir dard": "headache",
+    "seena dard": "chest pain",
+    "pet me jalan": "acidity / stomach burning",
+    "dva": "medicine",
+    "dvai": "medicine",
+    "dawa": "medicine",
+    "dawai": "medicine",
+    "dava": "medicine",
+    "dawaii": "medicine",
+    "bukhar": "fever",
+    "bhukar": "fever",
+    "bukhr": "fever",
+    "ulti": "vomiting",
+    "khansi": "cough",
+    "khaansi": "cough",
+    "ilaj": "treatment",
+    "upchar": "treatment",
+    "ilaaj": "treatment",
+    "bimari": "illness",
+    "bimaari": "illness",
+    "lakshan": "symptoms",
+    "laksan": "symptoms",
+    "btao": "tell me",
+    "batao": "tell me",
+    "btayie": "tell me",
+    "batayie": "tell me",
+}
+
+def _decode_hinglish_query(query: str) -> str:
+    """Silently decode Hinglish medical query into plain English for LLM understanding."""
+    q = query.lower()
+    for hindi, english in _HINGLISH_DECODE.items():
+        q = q.replace(hindi, english)
+    return q
+
+
 class PromptBuilder:
     """
     Constructs highly optimized, domain-specific, and language-tailored RAG prompts
@@ -9,109 +51,130 @@ class PromptBuilder:
     """
 
     def build_adaptive_prompt(
-        self, 
-        query: str, 
-        chunks: list, 
-        language: str, 
-        domain: str, 
-        intent: str, 
+        self,
+        query: str,
+        chunks: list,
+        language: str,
+        domain: str,
+        intent: str,
         query_plan: list = None,
         graph_triples: list = None
     ) -> str:
         """
-        Builds the system instructions, context chunks, query plan, and user question blocks.
+        Builds system instructions, context chunks, and formatting rules.
         """
-        # 1. System instructions block
-        lang_instruction = ""
+
+        # ── Silently decode Hinglish query into English so the LLM understands intent
+        decoded_query = _decode_hinglish_query(query) if language == "Hinglish" else query
+
+        # ── 1. Language instruction
         if language == "Hindi":
-            lang_instruction = "CRITICAL: You MUST reply entirely in Hindi using the Devanagari script. Do NOT use English or Hinglish."
+            lang_instruction = (
+                "CRITICAL LANGUAGE RULE: Respond ONLY in Hindi using Devanagari script (हिंदी). "
+                "Do NOT use English or Hinglish."
+            )
         elif language == "Hinglish":
             lang_instruction = (
-                "CRITICAL: You MUST reply entirely in Hinglish. Hinglish means writing Hindi words using ONLY the English/Latin alphabet. "
-                "For example: 'Aapko fever ke liye paracetamol leni chahiye' or 'Mera bank account block ho gaya hai'. "
-                "ABSOLUTELY DO NOT USE DEVANAGARI SCRIPT (like हिंदी) and DO NOT reply in plain English."
+                "CRITICAL LANGUAGE RULE: Write your answer ONLY in natural, friendly Hinglish "
+                "(conversational Hindi sentences using the English/Latin alphabet). "
+                "Write like a helpful friend explaining things simply. "
+                "IMPORTANT: Do NOT copy or echo the user's exact query words into every sentence. "
+                "Do NOT repeat phrases like 'pet dard ki dva btao' in the answer — "
+                "instead use natural phrases like 'stomach pain ke liye' or 'pet dard mein aaram ke liye'. "
+                "Do NOT use Devanagari script and do NOT respond in plain English."
             )
         else:
-            lang_instruction = "CRITICAL: You MUST reply entirely in English."
+            lang_instruction = "CRITICAL LANGUAGE RULE: Respond ONLY in clear, professional English."
 
         system_role = (
-            f"You are Saarthi AI, a trusted medical, legal, and banking cognitive offline assistant.\n"
+            "You are Saarthi AI, a helpful, caring, and accurate medical, legal, and banking assistant. "
+            "You answer in a natural, human-friendly way — like a knowledgeable friend, not a robot.\n"
             f"{lang_instruction}\n"
         )
-        
-        # 2. Strict grounding & topic focus constraints
-        constraints = (
-            "VERY IMPORTANT RULES:\n"
-            "1. Answer the user's question directly, clearly, and completely using ONLY the facts in the Source Excerpts below.\n"
-            "2. Always provide a full, helpful, and objective answer. Never refuse or decline to answer valid medical, legal, or banking queries.\n"
-            "3. Stay strictly focused on the user's specific question. Do not bring up unrelated topics.\n"
-            "4. Keep your answer clear, informative, and professional.\n"
+
+        # ── 2. Core answer rules
+        rules = (
+            "CORE RULES:\n"
+            "1. Give a clear, natural, human-friendly answer. Do NOT be robotic or repetitive.\n"
+            "2. NEVER repeat the user's original query words in every line of your answer.\n"
+            "3. Do NOT mention 'Source Excerpts', 'Reference Facts', 'provided documents' or 'context'. "
+            "Speak directly and naturally.\n"
+            "4. Never refuse valid medical, legal, or banking questions.\n"
+            "5. ANTI-HALLUCINATION: Only use information from the Reference Facts. "
+            "Do NOT invent or assume anything not written there.\n"
         )
 
-        # 2.5 Formatting instructions
-        formatting = (
-            "FORMAT YOUR ANSWER:\n"
-            "- Write a complete, multi-sentence response in clean prose.\n"
-            "- Use bullet points or numbered steps where helpful.\n"
-            "- Do NOT output LaTeX math, boxed math, or raw code blocks.\n"
-        )
-
-        # 3. Inject Knowledge Graph Context (if available)
-        graph_block = ""
-        if graph_triples:
-            graph_block = "Structured Entity-Relations:\n"
-            for t in graph_triples:
-                graph_block += f"- ({t.get('subject')}) --[{t.get('relation')}]--> ({t.get('object')})\n"
-            graph_block += "\n"
-
-        # 4. Context chunks assembly
-        context_block = "Source Excerpts:\n"
-        for c in chunks:
-            indices_str = ",".join(map(str, c.get("citation_indices", [c.get("index", 1)])))
-            is_user_upload = (c.get('collection') == 'user_docs') or (c.get('domain') == 'user_upload')
-            priority_tag = " (Priority: HIGH - USER UPLOADED DOCUMENT)" if is_user_upload else ""
-            
-            context_block += (
-                f"Excerpt [{indices_str}]{priority_tag}:\n{c['text']}\n\n"
-            )
-
-        # 5. Logical Query Plan block
-        plan_block = ""
-        if query_plan and len(query_plan) > 1:
-            plan_block = "Logical Query Plan Tasks:\n"
-            for t in query_plan:
-                plan_block += f"- Task {t['task_id']}: {t['description']}\n"
-            plan_block += "\n"
-
-        # Check if user uploaded documents are present in chunks
+        # ── 3. User document directive
         has_user_doc = any(
-            (c.get('collection') == 'user_docs') or (c.get('domain') == 'user_upload') 
+            (c.get("collection") == "user_docs") or (c.get("domain") == "user_upload")
             for c in chunks
-        )
-        
-        doc_access_directive = ""
+        ) if chunks else False
+
         if has_user_doc:
-            doc_access_directive = (
-                "DOCUMENT ANALYSIS DIRECTIVE:\n"
-                "The user has uploaded a document/image. The transcribed text of their document is provided below under 'Source Excerpts'. "
-                "Analyze and summarize the Excerpts directly in clear, helpful prose. Start your response immediately with the document summary.\n\n"
+            heading_hint = (
+                "(e.g., ### 📌 Report Summary, ### 📋 Patient Details, "
+                "### 🔬 Test Results, ### 💡 Key Takeaways)"
+            )
+            doc_directive = (
+                "DOCUMENT ANALYSIS RULES — FOLLOW WITHOUT EXCEPTION:\n"
+                "The text below (in Reference Facts) is OCR-extracted from the uploaded document. "
+                "Some words may be slightly garbled due to scan quality — use context to understand them.\n"
+                "CRITICAL RULES:\n"
+                "1. Extract and report ONLY what is actually written in the document. Never invent data.\n"
+                "2. 'NON REACTIVE' = NEGATIVE. The patient does NOT have that condition. "
+                "NEVER call a NON REACTIVE result 'positive'. Always write: ✅ NON REACTIVE (Negative).\n"
+                "3. Read patient name, bill number, dates, test results EXACTLY as shown in the text. "
+                "Common OCR garbling: 'SANICSM DEVE' likely means 'SANTOSH DEVI' — use best-effort reading.\n"
+                "4. For each test in the report, clearly show: Test Name → Result.\n"
+                "5. If something is genuinely not readable or missing, write: 'Not clearly readable in the scan'.\n"
+                "6. Do NOT add any diagnosis, interpretation, or medical advice beyond what the report states.\n\n"
+            )
+        else:
+            heading_hint = "(e.g., ### 📌 Overview, ### 💊 Medicines, ### ⚠️ When to See a Doctor)"
+            doc_directive = ""
+
+        # ── 4. Formatting rules
+        formatting = (
+            "FORMATTING RULES:\n"
+            "- Use clean Markdown. Start with a 1-2 sentence plain overview.\n"
+            f"- Use section headings like {heading_hint}.\n"
+            "- Use **bold** for key terms, medicine names, test results, or important warnings.\n"
+            "- Use bullet points for lists. Keep it concise and easy to read.\n"
+            "- Sound natural and friendly, not clinical or repetitive.\n"
+        )
+
+        # ── 5. Context block — use decoded query as the framing question for the LLM
+        if chunks:
+            context_block = "Reference Facts (from the document / knowledge base):\n"
+            for idx, c in enumerate(chunks, 1):
+                context_block += f"Fact [{idx}]: {c['text']}\n\n"
+        else:
+            context_block = (
+                "Reference Facts: No document match found. "
+                "Answer using your general medical/legal/banking knowledge.\n\n"
             )
 
-        # 7. Final user prompt
-        user_block = f"Question: {query}\n\nAnswer:"
+        # Show the decoded query to the LLM so it understands intent, but also show original query
+        if language == "Hinglish" and decoded_query != query:
+            user_block = (
+                f"User's Question (original): {query}\n"
+                f"Interpreted Meaning: {decoded_query}\n\n"
+                f"Answer (in natural Hinglish):"
+            )
+        else:
+            user_block = f"User Question: {query}\n\nAnswer:"
 
-        # Combine all parts
         full_prompt = (
             f"{system_role}\n"
-            f"{constraints}\n"
-            f"{doc_access_directive}"
+            f"{rules}\n"
             f"{formatting}\n"
-            f"{graph_block}"
+            f"{doc_directive}"
             f"{context_block}"
             f"{user_block}"
         )
-        
+
         logger.info("Adaptive prompt constructed successfully.")
         return full_prompt
+
 
 prompt_builder = PromptBuilder()
