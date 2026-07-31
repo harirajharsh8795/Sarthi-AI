@@ -134,5 +134,12 @@ def run_environment_checks() -> bool:
     else:
         logger.info("FFmpeg executable verified on PATH.")
 
+    # 6. Trigger non-blocking background sync for local Markdown Knowledge Base
+    import threading
+    import kb_pipeline
+    threading.Thread(target=kb_pipeline.index_all_local_knowledge_base, daemon=True).start()
+    logger.info("Triggered background Markdown Knowledge Base sync thread.")
+
     logger.info("Startup validation checks completed.")
     return True
+

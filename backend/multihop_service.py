@@ -16,25 +16,27 @@ class MultihopService:
         session_id: str, 
         conversation_id: str = None,
         query_language: str = None,
-        original_query: str = None
+        original_query: str = None,
+        query_domain: str = None
     ) -> list:
         """
         Runs a retrieval query for each task in the query plan and merges results.
         Enforces deduplication of chunks by source and page.
         """
-        # If the original query or plan concerns user documents, bypass multi-hop
-        is_doc_query = False
-        if original_query and retrieval_router.is_document_about_query(original_query):
-            is_doc_query = True
+        # If the original query is short (< 15 words) or concerns user documents, bypass multi-hop loop for speed
+        is_direct_query = False
+        if original_query and (len(original_query.split()) <= 15 or retrieval_router.is_document_about_query(original_query)):
+            is_direct_query = True
         elif query_plan and any(retrieval_router.is_document_about_query(t.get("query_terms", "") or t.get("description", "")) for t in query_plan):
-            is_doc_query = True
+            is_direct_query = True
 
-        if is_doc_query:
+        if is_direct_query:
             sub_query = original_query or (query_plan[0].get("query_terms") or query_plan[0].get("description") if query_plan else "")
-            logger.info(f"Document query detected. Bypassing multi-hop retrieval for: '{sub_query}'")
-            res = retrieval_router.retrieve_context(sub_query, session_id, conversation_id, query_language=query_language)
+            logger.info(f"Direct query detected. Single-pass retrieval for: '{sub_query}'")
+            res = retrieval_router.retrieve_context(sub_query, session_id, conversation_id, query_language=query_language, query_domain=query_domain)
             chunks = res.get("context_chunks", [])
             return ranking_service.rerank_chunks(sub_query, chunks)
+
 
         all_chunks = []
         seen_identifiers = set()
@@ -47,7 +49,7 @@ class MultihopService:
             logger.info(f"Triggering RAG hop for sub-task query: '{sub_query}'")
             
             # Run sub-query retrieval
-            res = retrieval_router.retrieve_context(sub_query, session_id, conversation_id, query_language=query_language)
+            res = retrieval_router.retrieve_context(sub_query, session_id, conversation_id, query_language=query_language, query_domain=query_domain)
             chunks = res.get("context_chunks", [])
             
             # Rerank retrieved chunks

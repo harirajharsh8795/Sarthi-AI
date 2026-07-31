@@ -75,6 +75,95 @@ class SpeakRequest(BaseModel):
     language: str
 
 
+# ── Frontend dev-server process handle ──────────────────────────────────────
+_frontend_process: Optional[subprocess.Popen] = None
+
+def _start_frontend() -> None:
+    """Launch the Vite frontend dev-server as a background subprocess and open browser."""
+    global _frontend_process
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    frontend_dir = os.path.join(os.path.dirname(backend_dir), "frontend")
+
+    if not os.path.isdir(frontend_dir):
+        logger.warning(f"Frontend directory not found at '{frontend_dir}'. Skipping auto-start.")
+        return
+
+    npm_cmd = "npm.cmd" if os.name == "nt" else "npm"
+
+    # 1. Check if node_modules exists, install if missing
+    node_modules_dir = os.path.join(frontend_dir, "node_modules")
+    if not os.path.isdir(node_modules_dir):
+        logger.info("📦 Installing frontend dependencies (node_modules)...")
+        try:
+            subprocess.run([npm_cmd, "install"], cwd=frontend_dir, check=True)
+            logger.info("✅ Frontend dependencies installed successfully.")
+        except Exception as e:
+            logger.error(f"Failed to run 'npm install' for frontend: {e}")
+
+    # 2. Launch Vite dev server
+    try:
+        _frontend_process = subprocess.Popen(
+            [npm_cmd, "run", "dev"],
+            cwd=frontend_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+
+        # Thread to consume process output to prevent stdout buffer deadlocks
+        def log_frontend_output():
+            if _frontend_process and _frontend_process.stdout:
+                for line in iter(_frontend_process.stdout.readline, ''):
+                    if line:
+                        logger.debug(f"[Vite Frontend] {line.strip()}")
+                _frontend_process.stdout.close()
+
+        import threading
+        threading.Thread(target=log_frontend_output, daemon=True).start()
+
+        logger.info(
+            f"✅ Frontend dev-server started automatically (PID {_frontend_process.pid}) "
+            f"→ http://localhost:5173"
+        )
+
+        # 3. Auto-open browser after a short delay
+        def open_browser():
+            import time, webbrowser
+            time.sleep(2.0)
+            try:
+                webbrowser.open("http://localhost:5173")
+            except Exception:
+                pass
+
+        threading.Thread(target=open_browser, daemon=True).start()
+
+    except FileNotFoundError:
+        logger.error(
+            "npm not found on PATH. Please install Node.js to enable frontend auto-start."
+        )
+    except Exception as e:
+        logger.error(f"Failed to auto-start frontend: {e}")
+
+
+def _stop_frontend() -> None:
+    """Terminate the Vite frontend dev-server if it is running."""
+    global _frontend_process
+    if _frontend_process is None:
+        return
+    try:
+        _frontend_process.terminate()
+        try:
+            _frontend_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _frontend_process.kill()
+        logger.info(f"🛑 Frontend dev-server (PID {_frontend_process.pid}) stopped.")
+    except Exception as e:
+        logger.error(f"Error stopping frontend dev-server: {e}")
+    finally:
+        _frontend_process = None
+
+
 # System Lifespan for Graceful Shutdowns
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -82,9 +171,13 @@ async def lifespan(app: FastAPI):
     run_environment_checks()
     # Call whisper and DB initialization
     preload_whisper()
+    # Auto-start the frontend dev-server
+    _start_frontend()
     yield
     # Shutdown resource release
     logger.info("Initiating graceful shutdown sequence...")
+    # 0. Stop the frontend dev-server
+    _stop_frontend()
     # 1. Cancel active streams
     async with active_streams_lock:
         for conv_id, task in list(active_streams.items()):
@@ -118,7 +211,13 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+        "http://0.0.0.0:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -206,8 +305,7 @@ def get_ffmpeg_path():
                 return os.path.join(root, "ffmpeg.exe")
     return None
 
-# Load Whisper in a startup event hook
-@app.on_event("startup")
+# Preload Whisper and database in startup lifecycle
 def preload_whisper():
     global whisper_model
     # Expose ffmpeg directory to system PATH
@@ -756,8 +854,7 @@ def health_check():
         kb_chunks = 0
         try:
             import services
-            collection = services.chroma_manager.get_collection("knowledge_base")
-            kb_chunks = collection.count()
+            kb_chunks = services.chroma_manager.get_total_chunk_count()
         except Exception:
             chroma_status = "error"
             

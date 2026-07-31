@@ -60,17 +60,17 @@ class IntentService:
         if text_lower.strip() in greetings:
             return "General", "Greeting", 1.0
 
-        # Medical triggers (includes common Hinglish misspellings)
+        # Medical triggers (includes common Hinglish misspellings & synonyms)
         medical_keywords = {
             "fever", "bukhar", "bhukhar", "bhukar", "bukhr", "bukhaar",
             "pain", "dard", "drd",
-            "doctor", "hospital", "illness", "bimari", "bimaari", "beemar", "bimar",
-            "dawa", "dawai", "dvai", "dvaii", "dawaii", "medicine", "goli",
-            "symptoms", "treatment", "ilaj", "ilaaj",
-            "canc", "cancer", "tb", "cough", "khansi", "khaansi",
-            "sehat", "health", "patient", "mareez",
+            "doctor", "hospital", "illness", "bimari", "bimaari", "beemar", "bimar", "rog", "rogi", "mariz", "mareez",
+            "dawa", "dawai", "dava", "dva", "dvai", "dvaii", "dawaii", "medicine", "goli", "tablet", "syrup", "injection", "aushadh",
+            "symptoms", "symptom", "lakshan", "laksan", "treatment", "ilaj", "ilaaj", "upchar", "chikitsa",
+            "canc", "cancer", "prostate", "leukemia", "tumor", "chemo", "radiotherapy", "oncology",
+            "tb", "cough", "khansi", "khaansi", "sehat", "health", "patient",
             "dengue", "malaria", "typhoid", "sugar", "diabetes", "bp", "blood",
-            "report", "prescription", "diagnosis"
+            "report", "prescription", "diagnosis", "infection", "sujan", "swelling"
         }
         
         # Legal triggers

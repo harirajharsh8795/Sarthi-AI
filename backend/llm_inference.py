@@ -105,7 +105,7 @@ def _generate_answer_stream_inner(
     
     # 4. Multi-hop Retrieval & Hybrid Reranking
     start_retrieval = time.perf_counter()
-    context_chunks = multihop_service.retrieve_multihop(plan, session_id or "", conversation_id, query_language=lang, original_query=query)
+    context_chunks = multihop_service.retrieve_multihop(plan, session_id or "", conversation_id, query_language=lang, original_query=query, query_domain=domain)
     
     # Isolation Guard Verification
     from isolation_guard import isolation_guard
@@ -138,45 +138,12 @@ def _generate_answer_stream_inner(
     user_doc_chunks_used = sum(1 for c in context_chunks if c["collection"] == "user_docs")
     knowledge_base_chunks_used = sum(1 for c in context_chunks if c["collection"] == "knowledge_base")
     
-    # Check threshold guard
-    SKIP_LLM_THRESHOLD = 0.22
-    max_sim = max([c.get("hybrid_score") or c.get("similarity_score", 0.0) for c in context_chunks]) if context_chunks else 0.0
-    has_user_doc_chunks = user_doc_chunks_used > 0
-    
-    # Check medical domain alignment (support both 'medical' and 'hospital' domains)
-    query_lower = query.lower()
-    medical_keywords = ["bukhar", "bhukar", "bhukhar", "bukhaar", "fever", "bimari", "bimaari", "dawai", "dvai", "dvaii", "dawa", "ilaj", "symptoms", "pain", "dard", "dengue", "malaria", "cough", "khansi", "doctor", "hospital", "report", "prescription", "goli", "condom", "sex", "libido"]
-    is_medical_query = any(k in query_lower for k in medical_keywords)
-    domain_mismatch = is_medical_query and not has_user_doc_chunks and all(c.get("domain") not in ("hospital", "medical") for c in context_chunks)
-    
-    if (max_sim < SKIP_LLM_THRESHOLD or domain_mismatch) and not has_user_doc_chunks:
-        # Fallback text
-        if lang == "Hindi":
-            fallback_text = (
-                "इस विषय पर मेरे दस्तावेज़ों में विश्वसनीय जानकारी नहीं मिली। "
-                "कृपया संबंधित दस्तावेज़ अपलोड करके प्रश्न पूछें।"
-            )
-        else:
-            fallback_text = (
-                "I could not find reliable information about this topic in my document library. "
-                "You can upload a relevant document and ask me questions about it."
-            )
-            
-        yield {"skipped_llm": True, "has_context": False, "citations": []}
-        yield {"type": "token", "data": {"token": fallback_text}}
-        yield {"type": "citation", "data": {"citations": []}}
-        
-        # Telemetry for skipped RAG
-        telemetry.log_inference(
-            session_id=session_id, query=query, expanded_query=rewritten_query, response_language=lang,
-            has_context=False, skipped_llm=True, user_doc_chunks_used=0, knowledge_base_chunks_used=0,
-            total_chunks_in_prompt=0, total_tokens_generated=0, generation_time_ms=0, tokens_per_second=0.0,
-            model_name=MODEL_NAME, intent=intent, detected_domain=domain
-        )
-        return
-
     # Limit context chunks to top 4 for optimal grounding and inference speed
-    context_chunks = context_chunks[:4]
+    if context_chunks:
+        context_chunks = context_chunks[:4]
+    else:
+        context_chunks = []
+
 
     # 5. Knowledge Graph Triples extraction
     start_graph = time.perf_counter()
@@ -192,22 +159,30 @@ def _generate_answer_stream_inner(
     prompt = prompt_builder.build_adaptive_prompt(
         rewritten_query, compressed_chunks, lang, domain, intent, plan, graph_triples
     )
-    prompt = f"IMPORTANT: You MUST respond ONLY in {lang}. Do not switch languages under any circumstances.\n\n" + prompt
+    if lang == "Hinglish":
+        prompt = (
+            "IMPORTANT: Respond ONLY in natural, friendly Hinglish. "
+            "Give a clear helpful answer — do NOT repeat the user's original question words in every sentence. "
+            "In Hinglish: 'pet' = stomach, 'dard/drd' = pain, 'dva/dvai/dawa' = medicine, 'bukhar' = fever.\n\n"
+        ) + prompt
+    else:
+        prompt = f"IMPORTANT: You MUST respond ONLY in {lang}. Do not switch languages under any circumstances.\n\n" + prompt
+
     
     # Sanitize user query string (strip trailing slashes that break string formatting)
     query = query.strip().rstrip('\\').rstrip('/').strip()
 
-    # 8. Local LLM streaming with maximum speed optimizations (greedy temperature 0.0)
+    # 8. Local LLM streaming with optimal speed & markdown formatting settings
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": True,
         "options": {
-            "temperature": 0.0,
+            "temperature": 0.2,
             "top_p": 0.9,
-            "num_ctx": 1024,
-            "num_predict": 450,
-            "repeat_penalty": 1.15
+            "num_ctx": 2048,
+            "num_predict": 512,
+            "repeat_penalty": 1.1
         }
     }
     
@@ -227,8 +202,8 @@ def _generate_answer_stream_inner(
                 total_tokens += 1
                 token_buffer += token
                 
-                # Buffer tokens slightly (2-3 chars or word boundaries) to deliver smooth SSE streaming without micro-lag
-                if len(token_buffer) >= 3 or " " in token_buffer or "\n" in token_buffer or data.get("done", False):
+                # Buffer tokens (2 chars or word boundary) for ultra-fast, smooth streaming
+                if len(token_buffer) >= 2 or " " in token_buffer or "\n" in token_buffer or data.get("done", False):
                     yield {
                         "type": "token",
                         "data": {"token": token_buffer}

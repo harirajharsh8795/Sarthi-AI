@@ -14,6 +14,38 @@ from glossary.query_expander import expand_query_with_glossary
 MIN_SIMILARITY_SCORE = 0.25
 USER_DOC_MIN_SIMILARITY = 0.25
 
+# Hinglish -> English medical term normalization map
+# Ensures correct retrieval even when user writes in Hinglish romanization
+HINGLISH_MEDICAL_MAP = {
+    "pet dard": "stomach pain abdominal pain",
+    "pet drd": "stomach pain abdominal pain",
+    "pet me dard": "stomach pain abdominal pain",
+    "pait dard": "stomach pain abdominal pain",
+    "pet me jalan": "stomach burning acidity gastritis",
+    "bukhar": "fever temperature",
+    "bhukar": "fever temperature",
+    "khansi": "cough respiratory",
+    "ulti": "vomiting nausea",
+    "sir dard": "headache migraine",
+    "seena dard": "chest pain cardiac",
+    "dawa": "medicine medication",
+    "dawai": "medicine medication",
+    "dva": "medicine medication",
+    "dvai": "medicine medication",
+    "ilaj": "treatment therapy",
+    "bimari": "disease illness condition",
+    "lakshan": "symptoms signs",
+}
+
+def normalize_hinglish_query(query: str) -> str:
+    """Expands Hinglish medical terms in query with their English equivalents for better retrieval."""
+    q_lower = query.lower()
+    expanded = q_lower
+    for hindi_term, english_equiv in HINGLISH_MEDICAL_MAP.items():
+        if hindi_term in q_lower:
+            expanded = expanded + " " + english_equiv
+    return expanded.strip()
+
 def check_session_exists(session_id: str) -> bool:
     """Validates that a session_id actually exists in SQLite user_sessions."""
     if not session_id:
@@ -75,19 +107,21 @@ def process_results(query_results: dict, collection_name: str, norm_q: float) ->
 
 def is_document_about_query(query: str) -> bool:
     """
-    Detects trigger phrases indicating the user wants to ask about their uploaded document.
+    Detects trigger phrases indicating the user wants to ask about or summarize their uploaded document.
     """
     if not query:
         return False
     query_lower = query.lower()
     trigger_phrases = [
         "pdf", "document", "uploaded file", "is file", "jo upload",
-        "summary do", "samjhao", "explain karo", "kya hai is",
-        "explain this", "summarize", "summarise", "about this file",
-        "mera document", "maine upload kiya", "report", "my file", 
-        "this doc", "this file"
+        "summary", "samjhao", "explain", "kya hai", "kya likha",
+        "summarize", "summarise", "about this", "brief", "reprort",
+        "repot", "report", "mera document", "uploaded", "my file", 
+        "this doc", "this file", "analyze", "analyse", "overview",
+        "check", "batao", "read", "describe", "details", "extract"
     ]
     return any(phrase in query_lower for phrase in trigger_phrases)
+
 
 def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None, n: int = 6) -> list:
     """
@@ -135,7 +169,7 @@ def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None,
     chunks = sorted(chunks, key=lambda x: (x["page_number"], x.get("chunk_index", 0)))
     return chunks[:n]
 
-def retrieve_context(query: str, session_id: str | None, conversation_id: str | None = None, query_language: str = None) -> dict:
+def retrieve_context(query: str, session_id: str | None, conversation_id: str | None = None, query_language: str = None, query_domain: str = None) -> dict:
     """
     Exposes primary RAG retrieval interface.
     1. Expands incoming query using glossary.
@@ -162,8 +196,9 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
                     "forced_user_doc_retrieval": True
                 }
 
-    # 1. Expand query via Stage 0 Glossary
+    # 1. Expand query via Stage 0 Glossary + Hinglish normalization
     expanded_query = expand_query_with_glossary(query)
+    expanded_query = normalize_hinglish_query(expanded_query)  # Expand Hinglish medical terms
     
     # 2. Generate embedding using shared model singleton
     model = kb_pipeline.get_embedding_model()
@@ -194,43 +229,66 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         if not is_document_about_query(query):
             user_chunks = [c for c in user_chunks if c["similarity_score"] >= 0.50]
         
-    # 4. Retrieve from knowledge_base (Global search across all 2700+ chunks)
+    # 4. Retrieve from knowledge_base with domain filtering
+    query_lower = query.lower()
+    med_terms = ["cancer", "blood", "leukemia", "prostate", "tumor", "fever", "bukhar", "pain", "dard", "drd", "bimari", "doctor", "hospital", "dawa", "dawai", "dvai", "dva", "medicine", "symptoms", "laksan", "lakshan", "ilaj", "treatment", "report", "vomit", "cough", "khansi"]
+    bank_terms = ["bank", "kyc", "account", "loan", "interest", "rbi", "card", "khata", "paisa", "atm", "transaction", "foreclosure"]
+    leg_terms = ["court", "ipc", "crpc", "bnss", "fir", "police", "rti", "complaint", "vakeel", "dhara", "kanoon", "law", "rights", "constitution"]
+
+    is_med_query = (query_domain == "Medical") or any(k in query_lower for k in med_terms)
+    is_bank_query = (query_domain == "Banking") or any(k in query_lower for k in bank_terms)
+    is_leg_query = (query_domain == "Legal") or any(k in query_lower for k in leg_terms)
+
+    where_clause = None
+    if is_med_query and not (is_bank_query or is_leg_query):
+        where_clause = {"domain": {"$in": ["hospital", "medical", "common"]}}
+    elif is_bank_query and not (is_med_query or is_leg_query):
+        where_clause = {"domain": "banking"}
+    elif is_leg_query and not (is_med_query or is_bank_query):
+        where_clause = {"domain": {"$in": ["legal", "constitution_and_general_law"]}}
+
     kb_chunks = []
     kb_collection = kb_pipeline.get_chroma_collection()
     
     try:
-        results_global = kb_collection.query(
-            query_embeddings=[query_embedding],
-            n_results=35,
-            include=["metadatas", "documents", "distances"]
-        )
+        query_kwargs = {
+            "query_embeddings": [query_embedding],
+            "n_results": 25,
+            "include": ["metadatas", "documents", "distances"]
+        }
+        if where_clause:
+            query_kwargs["where"] = where_clause
+
+        results_global = kb_collection.query(**query_kwargs)
         kb_chunks = process_results(results_global, "knowledge_base", norm_q)
-    except Exception as query_err:
-        kb_chunks = []
-        
-    # Also attempt domain-filtered query as supplementary
-    domains = ["banking", "legal", "medical", "common", "constitution_and_general_law", "hospital"]
-    for dom in domains:
+    except Exception:
         try:
-            results_dom = kb_collection.query(
+            results_global = kb_collection.query(
                 query_embeddings=[query_embedding],
-                n_results=10,
-                where={"domain": dom},
+                n_results=25,
                 include=["metadatas", "documents", "distances"]
             )
-            chunks_dom = process_results(results_dom, "knowledge_base", norm_q)
-            # Deduplicate by text
-            existing_texts = {c["text"] for c in kb_chunks}
-            for c in chunks_dom:
-                if c["text"] not in existing_texts:
-                    kb_chunks.append(c)
-                    existing_texts.add(c["text"])
+            kb_chunks = process_results(results_global, "knowledge_base", norm_q)
         except Exception:
-            pass
+            kb_chunks = []
 
-    # 4.5 Apply keyword/filename boosts to kb_chunks to improve precision and rank relevant documents first
-    query_lower = query.lower()
-    
+    # Strict domain isolation: purge cross-domain chunks
+    if is_med_query and not (is_bank_query or is_leg_query):
+        kb_chunks = [c for c in kb_chunks if "constitution" not in c.get("source", "").lower() and "banking" not in c.get("source", "").lower() and c.get("domain") not in ("banking", "legal", "constitution_and_general_law")]
+    elif is_bank_query and not (is_med_query or is_leg_query):
+        kb_chunks = [c for c in kb_chunks if "medical" not in c.get("source", "").lower() and "hospital" not in c.get("source", "").lower() and c.get("domain") not in ("medical", "hospital", "legal")]
+    elif is_leg_query and not (is_med_query or is_bank_query):
+        kb_chunks = [c for c in kb_chunks if "banking" not in c.get("source", "").lower() and "medical" not in c.get("source", "").lower() and c.get("domain") not in ("medical", "hospital", "banking")]
+
+    # Cancer & Blood Cancer specific boost
+    if "cancer" in query_lower or "leukemia" in query_lower:
+        for chunk in kb_chunks:
+            txt_lower = chunk["text"].lower()
+            if "cancer" in txt_lower or "leukemia" in txt_lower or "tumor" in txt_lower:
+                chunk["similarity_score"] += 0.40
+            if "symptom" in txt_lower or "blood" in txt_lower:
+                chunk["similarity_score"] += 0.20
+                
     # RTI Boost
     if any(k in query_lower for k in ["rti", "right to information", "सूचना का अधिकार", "suchna ka adhikar"]):
         for chunk in kb_chunks:
@@ -250,17 +308,19 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
                 chunk["similarity_score"] += 0.35
 
     # Stomach pain / Abdominal pain / General symptom boost & isolation
-    is_pain_or_fever = any(k in query_lower for k in ["pet", "drd", "dard", "stomach", "pain", "bukhar", "fever", "bcha", "bacha", "child", "vomit", "ulti"])
+    is_pain_or_fever = any(k in query_lower for k in ["pet", "drd", "dard", "stomach", "pain", "bukhar", "bhukar", "fever", "bcha", "bacha", "child", "vomit", "ulti", "dva", "dawai", "goli", "upchar", "symptom"])
     is_sexual_query = any(k in query_lower for k in ["sex", "condom", "youn", "timing", "bdhaye", "pehna", "libido", "erectile", "masturbation"])
 
     if is_pain_or_fever and not is_sexual_query:
-        # Boost abdominal pain / general symptoms files
         for chunk in kb_chunks:
             src_lower = chunk["source"].lower()
-            if "abdominal" in src_lower or "symptoms" in src_lower or "pain" in src_lower:
+            txt_lower = chunk["text"].lower()
+            if any(k in query_lower for k in ["pet", "stomach", "abdominal"]) and any(k in src_lower or k in txt_lower for k in ["stomach", "abdominal", "pet"]):
+                chunk["similarity_score"] += 0.55
+            elif "symptoms" in src_lower or "pain" in src_lower:
                 chunk["similarity_score"] += 0.45
-        # Filter out sexual health chunks completely for general symptom queries
         kb_chunks = [c for c in kb_chunks if "sexual_health" not in c["source"].lower()]
+
 
     # Sexual Health Boost
     if is_sexual_query:
@@ -288,7 +348,18 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         if lang_filtered:
             kb_chunks = lang_filtered
 
-    # 5. Merge and rank
+    # 5. Boost local knowledge_base chunks (from internal MD files) over external ICMR/NHM sources
+    # Internal KB md files should be the FIRST priority knowledge source
+    for chunk in kb_chunks:
+        src_lower = chunk.get("source", "").lower()
+        # If source is a local .md file from our knowledge_base folders, boost it
+        if src_lower.endswith(".md") or src_lower.endswith(".txt"):
+            chunk["similarity_score"] += 0.15
+        # Slightly de-prioritize external ICMR/government download sources when local content exists
+        elif any(ext in src_lower for ext in ["icmr", "nhm", "mohfw", "who", "niti"]):
+            chunk["similarity_score"] -= 0.05
+
+    # 6. Merge and rank
     # Sort each set descending by similarity score
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)

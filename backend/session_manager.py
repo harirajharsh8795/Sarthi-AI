@@ -138,6 +138,30 @@ def get_or_create_session(session_id, display_name=None):
     conn.close()
     return res
 
+def ensure_conversation_exists(conversation_id: str, session_id: str, title: str = "New Conversation", device_id: str = None) -> str:
+    """
+    Ensures a conversation record exists in SQLite. 
+    Creates the conversation automatically if missing or if conversation_id is 'new'.
+    Returns the valid conversation_id.
+    """
+    get_or_create_session(session_id)
+    if not conversation_id or conversation_id == "new":
+        import uuid
+        conversation_id = f"conv_{uuid.uuid4().hex[:8]}"
+        create_conversation(conversation_id, session_id, title, device_id)
+        return conversation_id
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM conversations WHERE id = ?", (conversation_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        create_conversation(conversation_id, session_id, title, device_id)
+
+    return conversation_id
+
 def create_document_record(document_id, session_id, original_filename, file_type, 
                            domain_hint=None, ocr_used=False, page_count=None, 
                            chunk_count=None, status="pending", ocr_confidence=None, 
@@ -146,8 +170,10 @@ def create_document_record(document_id, session_id, original_filename, file_type
     Inserts a new user document record.
     If the document already exists, raises an error or handles it.
     """
-    # Ensure the session exists
+    # Ensure session and conversation exist to respect SQLite FOREIGN KEY constraints
     get_or_create_session(session_id)
+    if conversation_id:
+        conversation_id = ensure_conversation_exists(conversation_id, session_id)
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -366,11 +392,15 @@ def create_conversation(conversation_id: str, session_id: str, title: str = "New
     conn.close()
     return conversation_id
 
-def save_message(message_id: str, conversation_id: str, role: str, content: str, citations: list = None) -> None:
+def save_message(message_id: str, conversation_id: str, role: str, content: str, citations: list = None, session_id: str = "default_session") -> None:
     """
     Saves a message to SQLite. Automatically increments message_count in conversations.
     If it is the first user message, automatically updates the conversation title to match.
     """
+    # Ensure foreign key validity for conversation_id
+    if conversation_id:
+        conversation_id = ensure_conversation_exists(conversation_id, session_id, title=content[:100] if role == "user" else "New Conversation")
+        
     conn = get_db_connection()
     cursor = conn.cursor()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")

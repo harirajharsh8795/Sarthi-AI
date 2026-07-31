@@ -5,6 +5,21 @@ import sqlite3
 import logging
 import urllib.parse
 import requests
+
+# Safe DTensor monkeypatch for PyTorch / Transformers compatibility
+try:
+    import torch
+    import torch.distributed
+    try:
+        import torch.distributed.tensor
+        if not hasattr(torch.distributed.tensor, "DTensor"):
+            class DTensor: pass
+            torch.distributed.tensor.DTensor = DTensor
+    except Exception:
+        pass
+except Exception:
+    pass
+
 from tqdm import tqdm
 import fitz  # PyMuPDF
 import langdetect
@@ -430,90 +445,152 @@ def extract_text_from_docx(docx_path):
 
 def extract_text_from_image_ocr(image_path):
     """
-    Applies robust preprocessing (grayscale, adaptive median filtering for noise, 
-    autocontrast stretching, and adaptive thresholding using mean)
-    to extract text and compute mean confidence using Tesseract OCR.
+    Improved OCR extraction with DPI upscaling and smarter preprocessing
+    specifically tuned for scanned medical lab reports.
+    Filters out low-confidence garbage words to avoid hallucination-inducing noise.
     """
     from PIL import ImageFilter
     import numpy as np
-    
+
     img = Image.open(image_path)
-    
-    # 1. Grayscale
+
+    # 1. Upscale small images to at least 300 DPI equivalent width for better OCR accuracy
+    orig_w, orig_h = img.size
+    TARGET_W = 1800  # target width for good OCR
+    if orig_w < TARGET_W:
+        scale = TARGET_W / orig_w
+        new_w = int(orig_w * scale)
+        new_h = int(orig_h * scale)
+        img = img.resize((new_w, new_h), Image.LANCZOS)
+
+    # 2. Grayscale
     gray = ImageOps.grayscale(img)
-    
-    # 2. Adaptive Median Filter to remove salt-and-pepper noise
-    denoised = gray.filter(ImageFilter.MedianFilter(size=3))
-    diff = np.abs(np.array(gray, dtype=np.int16) - np.array(denoised, dtype=np.int16))
-    mean_diff = np.mean(diff)
-    processed = denoised if mean_diff > 3.0 else gray
-    
-    # 3. Autocontrast stretching
-    contrast = ImageOps.autocontrast(processed)
-    
-    # 4. Adaptive thresholding using the mean of the image
-    img_np = np.array(contrast)
+
+    # 3. Mild sharpening to improve character edges in scanned docs
+    sharpened = gray.filter(ImageFilter.SHARPEN)
+
+    # 4. Autocontrast to normalize brightness across the whole scan
+    contrasted = ImageOps.autocontrast(sharpened, cutoff=2)
+
+    # 5. Smart binarization — only apply if background is clearly white (bright image)
+    img_np = np.array(contrasted)
     mean_val = np.mean(img_np)
-    threshold = mean_val if 30 < mean_val < 225 else 127
-    binarized = contrast.point(lambda p: 255 if p > threshold else 0)
-    
-    # Run OCR with english and hindi and return dictionary data for confidence scores
-    data = None
-    try:
-        data = pytesseract.image_to_data(binarized, lang="eng+hin", output_type=pytesseract.Output.DICT)
-    except Exception as e:
-        logger.debug(f"Warning: OCR with 'eng+hin' failed ({e}). Falling back to 'eng'.")
+    # For bright documents (mean > 160), binarize gently; for darker scans keep greyscale
+    if mean_val > 160:
+        threshold = int(mean_val * 0.85)
+        binarized = contrasted.point(lambda p: 255 if p > threshold else 0)
+    else:
+        binarized = contrasted  # Use greyscale for darker/lower-contrast scans
+
+    def run_ocr(image_obj, lang="eng"):
+        """Run Tesseract OCR and return (text, mean_confidence)."""
         try:
-            data = pytesseract.image_to_data(binarized, lang="eng", output_type=pytesseract.Output.DICT)
-        except Exception as ex:
-            logger.debug(f"Error: OCR failed ({ex})")
-            
-    # Reconstruct text and calculate mean confidence
-    text = ""
-    mean_conf = 0.0
-    if data:
-        # Reconstruct lines
-        lines = {}
-        confidences = []
-        for i in range(len(data['text'])):
-            word = data['text'][i]
-            conf = data['conf'][i]
-            if word.strip():
-                line_key = (data['page_num'][i], data['block_num'][i], data['par_num'][i], data['line_num'][i])
-                if line_key not in lines:
-                    lines[line_key] = []
-                lines[line_key].append(word)
-                
-                # Exclude -1 confidences (non-text/block areas)
+            data = pytesseract.image_to_data(
+                image_obj, lang=lang,
+                config="--oem 3 --psm 6",
+                output_type=pytesseract.Output.DICT
+            )
+        except Exception:
+            try:
+                data = pytesseract.image_to_data(
+                    image_obj, lang=lang,
+                    config="--oem 3 --psm 6",
+                    output_type=pytesseract.Output.DICT
+                )
+            except Exception:
+                return "", 0.0
+
+            lines = {}
+            confidences = []
+            for i in range(len(data.get("text", []))):
+                word = (data.get("text", [""])[i] or "").strip()
+                conf_raw = data.get("conf", ["-1"])[i]
+                try:
+                    conf = float(conf_raw)
+                except Exception:
+                    # Some tesseract builds return '-1' or '' for numeric confs
+                    conf = -1.0
+
+                # Skip empty words and very low confidence garbage (< 40)
+                if not word or conf < 40:
+                    continue
+
+                line_key = (
+                    data.get("page_num", [1])[i],
+                    data.get("block_num", [0])[i],
+                    data.get("par_num", [0])[i],
+                    data.get("line_num", [0])[i],
+                )
+                lines.setdefault(line_key, []).append(word)
                 if conf > 0:
                     confidences.append(float(conf))
-                    
-        # Sort line keys and assemble text
-        sorted_keys = sorted(lines.keys())
-        line_texts = [" ".join(lines[k]) for k in sorted_keys]
-        text = "\n".join(line_texts)
-        
-        if confidences:
-            mean_conf = sum(confidences) / len(confidences)
-            
-    # Fallback to direct OCR on original image if binarization produced sparse/empty text (< 30 chars)
+
+            sorted_keys = sorted(lines.keys())
+            text = "\n".join(" ".join(lines[k]) for k in sorted_keys)
+            mean_conf = sum(confidences) / len(confidences) if confidences else 0.0
+            return text, mean_conf
+            text, mean_conf = text_en, conf_en
+
+    # Final fallback: raw image_to_string on original (unprocessed)
     if len(text.strip()) < 30:
         try:
-            raw_text = pytesseract.image_to_string(img, lang="eng+hin")
-            if not raw_text.strip():
-                raw_text = pytesseract.image_to_string(img, lang="eng")
-            if len(raw_text.strip()) > len(text.strip()):
-                text = raw_text.strip()
-                mean_conf = 75.0
+            raw = pytesseract.image_to_string(img, lang="eng+hin", config="--oem 3 --psm 6")
+            if not raw.strip():
+                raw = pytesseract.image_to_string(img, lang="eng", config="--oem 3 --psm 6")
+            if len(raw.strip()) > len(text.strip()):
+                text = raw.strip()
+                mean_conf = 70.0
         except Exception as ex:
-            logger.debug(f"Direct image OCR fallback failed: {ex}")
+            logger.debug(f"Final OCR fallback failed: {ex}")
+
+    # If Tesseract produced too little text or low confidence, try EasyOCR as a robust fallback
+    if (len(text.strip()) < 60 or mean_conf < 50.0):
+        try:
+            import easyocr
+
+            # Reader auto-detects GPU if available; limit to languages we expect
+            reader = easyocr.Reader(['en', 'hi'], gpu=False)
+            # easyocr expects either path or numpy array
+            try:
+                img_np = np.array(img.convert('RGB'))
+            except Exception:
+                img_np = None
+
+            easy_text_blocks = []
+            easy_confs = []
+            if img_np is not None:
+                results = reader.readtext(img_np)
+                # results: list of (bbox, text, confidence)
+                # Group results by their approximate y-coordinate to form lines
+                lines_by_y = {}
+                for bbox, txt, conf in results:
+                    # bbox is list of 4 points [[x1,y1],[x2,y2],...]
+                    y = int(sum([p[1] for p in bbox]) / 4)
+                    lines_by_y.setdefault(y, []).append((bbox, txt, conf))
+                    easy_confs.append(float(conf) * 100.0)  # scale to 0-100
+
+                for y in sorted(lines_by_y.keys()):
+                    parts = [t for _, t, _ in sorted(lines_by_y[y], key=lambda x: x[0][0][0])]
+                    easy_text_blocks.append(" ".join(parts))
+
+            easy_text = "\n".join(easy_text_blocks).strip()
+            easy_mean_conf = sum(easy_confs) / len(easy_confs) if easy_confs else 0.0
+
+            # Prefer EasyOCR if it returns more readable text
+            if len(easy_text) > len(text) and easy_mean_conf > mean_conf:
+                text = easy_text
+                mean_conf = easy_mean_conf
+        except Exception as ex:
+            logger.debug(f"EasyOCR fallback failed or not installed: {ex}")
 
     return text, mean_conf
+
 
 import hashlib
 from metrics_manager import metrics_manager
 from job_queue import job_queue
 from logger_config import logger
+from report_parser import extract_test_results_from_text
 
 def calculate_file_hash(file_path: str) -> str:
     """Computes MD5 hash of a file for duplicate upload checking."""
@@ -607,6 +684,31 @@ def ingest_user_document_task(
         has_text = any(t.strip() for _, t in pages_text)
         if not has_text:
             raise ValueError("No readable text found in document")
+
+        # If this looks like a medical lab report, parse structured test results
+        try:
+            # Collect per-page parsed results and, if found, prepend a structured summary chunk
+            structured_blocks = []
+            for pnum, ptext in pages_text:
+                parsed = extract_test_results_from_text(ptext)
+                if parsed:
+                    # Build a readable structured summary
+                    lines = [f"{r['test_name']} → {r['result']}" for r in parsed]
+                    structured = "Structured Test Results:\n" + "\n".join(lines)
+                    structured_blocks.append((pnum, structured))
+
+            # If we found any structured results, insert a leading page with aggregated facts
+            if structured_blocks:
+                agg_lines = []
+                for _, block in structured_blocks:
+                    agg_lines.append(block)
+                agg_text = "\n\n".join(agg_lines)
+                # Prepend as page 0 so chunking and prompts include it first
+                pages_text.insert(0, (0, agg_text))
+                page_count = len(pages_text)
+        except Exception:
+            # Non-fatal parsing errors shouldn't stop indexing
+            pass
             
         if ext in {".docx", ".jpg", ".jpeg", ".png", ".webp"}:
             sample_text = ""
@@ -773,3 +875,171 @@ def delete_document_and_chunks(document_id, session_id):
     # Soft-delete record in SQLite
     session_manager.delete_document_record(document_id, session_id)
     logger.debug(f"Soft-deleted document record {document_id} in SQLite.")
+
+def parse_markdown_file(file_path: str):
+    """
+    Parses a markdown file to extract frontmatter (YAML) and content body.
+    Returns metadata dict and content body string.
+    """
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        text = f.read()
+        
+    meta = {}
+    content = text
+    
+    if text.startswith("---"):
+        parts = text.split("---", 2)
+        if len(parts) >= 3:
+            raw_meta = parts[1]
+            content = parts[2]
+            for line in raw_meta.splitlines():
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    k = k.strip()
+                    v = v.strip().strip("[]").strip('"').strip("'")
+                    meta[k] = v
+
+    return meta, content.strip()
+
+def index_all_local_knowledge_base():
+    """
+    Recursively scans the local knowledge_base directory
+    and indexes all .md, .txt, and .pdf files into ChromaDB's knowledge_base collection.
+    """
+    import numpy as np
+    import services
+    
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    workspace_root = os.path.dirname(backend_dir)
+    
+    kb_root_candidates = [
+        os.path.join(workspace_root, "knowledge_base"),
+        os.path.join(backend_dir, "data", "knowledge_base"),
+        "./knowledge_base"
+    ]
+    
+    kb_root = None
+    for cand in kb_root_candidates:
+        if os.path.isdir(cand):
+            kb_root = cand
+            break
+            
+    if not kb_root:
+        logger.warning("No local knowledge_base directory found for indexing.")
+        return 0
+
+    logger.info(f"Indexing local knowledge base files from: {kb_root}")
+    
+    collection = services.chroma_manager.get_collection("knowledge_base")
+    model = get_embedding_model()
+    
+    total_indexed_files = 0
+    total_chunks_added = 0
+    
+    batch_ids = []
+    batch_embeddings = []
+    batch_metadatas = []
+    batch_documents = []
+    
+    for root, dirs, files in os.walk(kb_root):
+        for file in files:
+            ext = os.path.splitext(file)[1].lower()
+            if ext not in [".md", ".txt"]:
+                continue
+                
+            file_path = os.path.join(root, file)
+            rel_path = os.path.relpath(file_path, kb_root)
+            path_parts = rel_path.split(os.sep)
+            
+            # Determine domain hint from parent folder (e.g. medical, banking, legal, common)
+            domain = "common"
+            if len(path_parts) > 1:
+                top_folder = path_parts[0].lower()
+                if top_folder in ["medical", "hospital", "symptoms", "medicines"]:
+                    domain = "medical"
+                elif top_folder in ["banking"]:
+                    domain = "banking"
+                elif top_folder in ["legal", "constitution"]:
+                    domain = "legal"
+                    
+            if ext in [".md", ".txt"]:
+                meta, body = parse_markdown_file(file_path)
+                
+                if meta.get("domain"):
+                    doc_domain = meta.get("domain").lower()
+                    if doc_domain in ["medical", "hospital"]:
+                        domain = "medical"
+                    elif doc_domain in ["banking"]:
+                        domain = "banking"
+                    elif doc_domain in ["legal", "constitution", "constitution_and_general_law"]:
+                        domain = "legal"
+                        
+                title = meta.get("title") or os.path.splitext(file)[0].replace("_", " ").title()
+                keywords = meta.get("keywords") or meta.get("aliases") or ""
+                category = meta.get("category") or "general"
+                
+                # Split body into logical chunks
+                paragraphs = [p.strip() for p in body.split("\n\n") if p.strip()]
+                current_chunk = f"Title: {title}\nKeywords: {keywords}\n"
+                chunks = []
+                
+                for para in paragraphs:
+                    if len(current_chunk) + len(para) < 750:
+                        current_chunk += "\n" + para
+                    else:
+                        chunks.append(current_chunk)
+                        current_chunk = f"Title: {title} (Contd)\nKeywords: {keywords}\n" + para
+                if current_chunk.strip():
+                    chunks.append(current_chunk)
+                    
+                if not chunks:
+                    continue
+                    
+                embeddings = model.encode(chunks, show_progress_bar=False)
+                
+                for idx, chunk_text in enumerate(chunks):
+                    chunk_id = f"kb_md_{hashlib.md5(rel_path.encode('utf-8')).hexdigest()[:10]}_c{idx}"
+                    emb_norm = float(np.linalg.norm(embeddings[idx]))
+                    
+                    meta_dict = {
+                        "domain": domain,
+                        "category": category,
+                        "title": title,
+                        "filename": file,
+                        "source": rel_path.replace(os.sep, "/"),
+                        "source_url": rel_path.replace(os.sep, "/"),
+                        "language": "multilingual",
+                        "page_number": 1,
+                        "chunk_index": idx,
+                        "vector_norm": emb_norm
+                    }
+                    
+                    batch_ids.append(chunk_id)
+                    batch_embeddings.append(embeddings[idx].tolist())
+                    batch_metadatas.append(meta_dict)
+                    batch_documents.append(chunk_text)
+                    
+                    if len(batch_ids) >= 100:
+                        collection.upsert(
+                            ids=batch_ids,
+                            embeddings=batch_embeddings,
+                            metadatas=batch_metadatas,
+                            documents=batch_documents
+                        )
+                        total_chunks_added += len(batch_ids)
+                        batch_ids, batch_embeddings, batch_metadatas, batch_documents = [], [], [], []
+                        
+                total_indexed_files += 1
+
+    if batch_ids:
+        collection.upsert(
+            ids=batch_ids,
+            embeddings=batch_embeddings,
+            metadatas=batch_metadatas,
+            documents=batch_documents
+        )
+        total_chunks_added += len(batch_ids)
+
+    logger.info(f"Local Markdown KB indexing complete! Indexed {total_indexed_files} files ({total_chunks_added} chunks).")
+    return total_chunks_added
+

@@ -122,7 +122,7 @@ class ValidationService:
                 unsupported.append(clean_s)
                 validated_sentences.append(s)
 
-        validated_answer = " ".join(validated_sentences).replace(' __NL__ ', '\n')
+        validated_answer = answer
         grounding_score = supported_count / len(sentences) if sentences else 1.0
         
         logger.info(f"Citation validation complete. Grounding score={grounding_score:.2f}")

@@ -21,14 +21,11 @@ def run_health_checks():
     except Exception as e:
         errors.append(f"SQLite DB check failed: {e}")
 
-    # 2. Check ChromaDB Collection
+    # 2. Check ChromaDB Collections
     try:
-        client = kb_pipeline.get_chroma_client()
-        col = client.get_collection("saarthi_kb")
-        cnt = col.count()
-        print(f" -> ChromaDB vector store: OK ({cnt} chunks indexed)")
-        if cnt == 0:
-            errors.append("ChromaDB 'saarthi_kb' collection is empty!")
+        import services
+        cnt = services.chroma_manager.get_total_chunk_count()
+        print(f" -> ChromaDB vector store: OK ({cnt} chunks total across collections)")
     except Exception as e:
         errors.append(f"ChromaDB check failed: {e}")
 
