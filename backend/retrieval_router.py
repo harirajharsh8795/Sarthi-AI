@@ -12,8 +12,9 @@ import session_manager
 from glossary.query_expander import expand_query_with_glossary
 
 # Configuration
-MIN_SIMILARITY_SCORE = 0.25
-USER_DOC_MIN_SIMILARITY = 0.25
+MIN_SIMILARITY_SCORE = 0.15
+USER_DOC_MIN_SIMILARITY = 0.15
+
 
 # Hinglish -> English medical term normalization map
 # Ensures correct retrieval even when user writes in Hinglish romanization
@@ -362,12 +363,13 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     md_chunks = sorted(md_chunks, key=lambda x: x["similarity_score"], reverse=True)
     pdf_chunks = sorted(pdf_chunks, key=lambda x: x["similarity_score"], reverse=True)
 
-    # Use a defined threshold for local file priority
-    MIN_SIMILARITY_SCORE = 0.30
-    if md_chunks and md_chunks[0]["similarity_score"] >= MIN_SIMILARITY_SCORE:
+    # Prioritize Curated Local Markdown KB Files (.md) when relevant match exists
+    if md_chunks and md_chunks[0]["similarity_score"] >= 0.25:
         kb_chunks = md_chunks
     else:
         kb_chunks = md_chunks + pdf_chunks
+
+
 
     # Merge, rank, and strictly clamp similarity scores within [0.0, 1.0]
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)

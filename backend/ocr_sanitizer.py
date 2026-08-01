@@ -47,17 +47,22 @@ class OCRSanitizer:
         if not text:
             return ""
 
-        repaired = text
+        tokens = text.split()
+        repaired_tokens = []
+        i = 0
+        while i < len(tokens):
+            # Look ahead for consecutive single-character alpha tokens (e.g. ['S', 'A', 'N', 'T', 'O', 'S', 'H'])
+            if len(tokens[i]) == 1 and tokens[i].isalpha() and i + 1 < len(tokens) and len(tokens[i+1]) == 1 and tokens[i+1].isalpha():
+                group = []
+                while i < len(tokens) and len(tokens[i]) == 1 and tokens[i].isalpha():
+                    group.append(tokens[i])
+                    i += 1
+                repaired_tokens.append("".join(group))
+            else:
+                repaired_tokens.append(tokens[i])
+                i += 1
 
-        # Repair 1: Spaced-out letters in individual words
-        # Matches 3 or more single capital/lowercase letters separated by single spaces (e.g. "S A N T O S H")
-        def _collapse_spaced_letters(match):
-            raw = match.group(0)
-            collapsed = re.sub(r'\s+', '', raw)
-            return collapsed
-
-        # Spaced-out uppercase sequence (e.g. "S A N T O S H  D E V I" -> "SANTOSH DEVI")
-        repaired = re.sub(r'\b(?:[A-Z]\s+){2,}[A-Z]\b', _collapse_spaced_letters, repaired)
+        repaired = " ".join(repaired_tokens)
 
         # Repair 2: Merged lowercase-Capital words (e.g. "nonReactive" -> "non Reactive", "hepatitisC" -> "hepatitis C")
         def _fix_camelcase_merge(match):
@@ -70,6 +75,8 @@ class OCRSanitizer:
         repaired = re.sub(r'([a-z]{2,})([A-Z][a-z]+)', _fix_camelcase_merge, repaired)
 
         return repaired
+
+
 
     def assess_ocr_quality(self, text: str) -> dict:
         """
