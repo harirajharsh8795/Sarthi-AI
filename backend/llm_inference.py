@@ -170,8 +170,8 @@ def _generate_answer_stream_inner(
     # Increasing num_ctx to 4096 adds ~380 MB FP16 KV cache memory allocation.
     # Total runtime footprint is ~1.3-1.5 GB Unified Memory, which easily fits within the 8 GB RAM budget
     # of Jetson Orin Nano (leaving ~6.5 GB for OS, PyTorch embeddings, and UI).
-    NUM_CTX = 4096
-    SAFE_TOKEN_LIMIT = int(NUM_CTX * 0.85)  # 85% of 4096 = 3,481 tokens max for prompt
+    NUM_CTX = settings.LLM_NUM_CTX
+    SAFE_TOKEN_LIMIT = int(NUM_CTX * 0.85)  # 85% of NUM_CTX for prompt safety margin
 
     # 7. Adaptive Prompt Building & Token Budget Safety Check
     def _assemble_prompt(chunks_to_use):
@@ -186,7 +186,7 @@ def _generate_answer_stream_inner(
     prompt = _assemble_prompt(compressed_chunks)
     estimated_tokens = prompt_builder.estimate_token_count(prompt)
 
-    # If prompt exceeds 85% of num_ctx, iteratively drop lowest-similarity context chunks first
+    # If prompt exceeds 85% of NUM_CTX, iteratively drop lowest-similarity context chunks first
     if estimated_tokens > SAFE_TOKEN_LIMIT and compressed_chunks:
         logger.warning(
             f"Prompt estimated tokens ({estimated_tokens}) exceeds 85% limit ({SAFE_TOKEN_LIMIT}) of num_ctx ({NUM_CTX}). "
@@ -204,7 +204,7 @@ def _generate_answer_stream_inner(
     # Sanitize user query string (strip trailing slashes that break string formatting)
     query = query.strip().rstrip('\\').rstrip('/').strip()
 
-    # 8. Local LLM streaming with optimal speed & markdown formatting settings
+    # 8. Local LLM streaming with optimal speed & Jetson Orin hardware options
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
@@ -217,9 +217,12 @@ def _generate_answer_stream_inner(
             "num_predict": 512,
             "repeat_penalty": 1.25,
             "presence_penalty": 0.5,
-            "frequency_penalty": 0.5
+            "frequency_penalty": 0.5,
+            "num_gpu": 1,
+            "use_mmap": True
         }
     }
+
 
     
     full_text = ""
