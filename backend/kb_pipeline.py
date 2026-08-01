@@ -803,13 +803,25 @@ def ingest_user_document_task(
         metadatas = []
         import numpy as np
         
+        from ocr_sanitizer import ocr_sanitizer
+
         for idx, chunk in enumerate(chunks):
             chunk_id = f"{session_id}_{document_id}_p{chunk['page_number']}_c{chunk['chunk_index']}"
             ids.append(chunk_id)
             
             # Calculate embedding norm
             emb_norm = float(np.linalg.norm(embeddings[idx]))
-            
+
+            # Assess chunk OCR quality score
+            quality_assessment = ocr_sanitizer.assess_ocr_quality(chunk["text"])
+            quality_score = quality_assessment["quality_score"]
+
+            if quality_assessment["is_low_quality"]:
+                logger.warning(
+                    f"Low OCR quality score ({quality_score}) for '{original_filename}' "
+                    f"on page {chunk['page_number']}. Warnings: {quality_assessment['warnings']}"
+                )
+
             meta = {
                 "session_id": session_id,
                 "conversation_id": conversation_id or "",
@@ -819,11 +831,13 @@ def ingest_user_document_task(
                 "page_number": chunk["page_number"],
                 "chunk_index": chunk["chunk_index"],
                 "language": detected_lang,
-                "vector_norm": emb_norm
+                "vector_norm": emb_norm,
+                "ocr_quality_score": quality_score
             }
             if domain_hint:
                 meta["domain_hint"] = domain_hint
             metadatas.append(meta)
+
             
         collection.upsert(
             ids=ids,

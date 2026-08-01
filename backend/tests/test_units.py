@@ -100,3 +100,33 @@ def test_sentence_aware_chunking():
         assert not t.endswith("अपेंडि")
         assert not t.endswith(" inflammation of")
 
+
+def test_ocr_sanitizer_quality_and_repair():
+    from ocr_sanitizer import ocr_sanitizer
+    
+    # 1. Test Spaced-out letters repair
+    raw_spaced = "Patient Name: S A N T O S H  D E V I"
+    repaired_spaced = ocr_sanitizer.sanitize_ocr_text(raw_spaced)
+    assert "SANTOSH DEVI" in repaired_spaced
+
+    # 2. Test CamelCase merged word repair
+    raw_merged = "HBSAG RAPID TEST result is nonReactive sample"
+    repaired_merged = ocr_sanitizer.sanitize_ocr_text(raw_merged)
+    assert "non Reactive" in repaired_merged
+
+    # 3. Conservative safety check: ensure legitimate medical codes like HBsAg remain preserved
+    raw_code = "Patient evaluated for HBsAg and HBV-DNA test"
+    repaired_code = ocr_sanitizer.sanitize_ocr_text(raw_code)
+    assert "HBsAg" in repaired_code
+
+    # 4. Test Quality Assessment scoring
+    clean_text = "Patient tested negative for Hepatitis B. Liver enzymes normal."
+    q_clean = ocr_sanitizer.assess_ocr_quality(clean_text)
+    assert q_clean["quality_score"] >= 0.80
+    assert q_clean["is_low_quality"] == False
+
+    garbled_text = "P a t i e n t  r e s u l t  H3p@t!t!$  b!ll#123  x y z"
+    q_garbled = ocr_sanitizer.assess_ocr_quality(garbled_text)
+    assert q_garbled["quality_score"] < 0.50
+
+

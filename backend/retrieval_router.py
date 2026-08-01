@@ -3,6 +3,7 @@ import sys
 import sqlite3
 import numpy as np
 
+
 # Ensure workspace is in import path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -383,10 +384,15 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     
     final_chunks = merged_chunks[:8]
     
+    user_docs_used = sum(1 for c in final_chunks if c.get("collection") == "user_docs")
+    kb_used = sum(1 for c in final_chunks if c.get("collection") == "knowledge_base")
+    
     return {
         "expanded_query": expanded_query,
         "context_chunks": final_chunks,
         "user_doc_chunks_used": user_docs_used,
         "knowledge_base_chunks_used": kb_used,
-        "has_any_context": has_any_context
+        "has_any_context": len(final_chunks) > 0,
+        "forced_user_doc_retrieval": False
     }
+
