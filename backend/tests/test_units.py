@@ -53,7 +53,8 @@ def test_prompt_building():
     )
     assert "Reference Facts" in prompt
     assert "KYC guidelines" in prompt
-    assert "ACCURACY & FALLBACK" in prompt
+    assert "CORE RULES" in prompt
+
 
 def test_privacy_redaction():
     text = "My Aadhaar is 1234 5678 9012 and PAN is ABCDE1234F"
