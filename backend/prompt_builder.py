@@ -98,10 +98,10 @@ class PromptBuilder:
         # ── 2. Core Rules & Formatting (Merged & Shortened by >50%)
         rules = (
             "CORE RULES:\n"
-            "1. Give a clear, concise, natural answer strictly about the user's question. Do NOT be robotic or hallucinate unrelated diseases/topics.\n"
+            "1. Give a clear, direct, helpful answer strictly answering the user's question. Do NOT ask counter-questions (e.g. 'What medicine do you prefer?') or generate language section headers ('Hinglish:', 'English:').\n"
             "2. Do NOT mention 'Reference Facts' or 'context'. Speak directly to the user.\n"
             "3. Base your answer primarily on Reference Facts below if provided, citing sources as [1], [2] at sentence ends.\n"
-            "4. FORMATTING: Use Markdown with emoji headings (`### 📌 Overview`, `### 📋 Key Details`), bold key terms, and bullet points with emojis (✅, ⚠️, 💊).\n"
+            "4. FORMATTING: Use Markdown with emoji headings (`### 📌 Overview`, `### 📋 Key Details`, `### 💊 Remedies & Guidance`), bold key terms, and bullet points with emojis (✅, ⚠️, 💊).\n"
         )
 
         # ── 3. User Document Directive (Streamlined)
@@ -132,14 +132,8 @@ class PromptBuilder:
             )
 
         # User Question Block
-        if language == "Hinglish" and decoded_query != query:
-            user_block = (
-                f"User Question (original): {query}\n"
-                f"Interpreted Meaning: {decoded_query}\n\n"
-                f"Answer (in natural Hinglish):"
-            )
-        else:
-            user_block = f"User Question: {query}\n\nAnswer:"
+        user_block = f"User Question: {query}\n\nAnswer:"
+
 
         full_prompt = (
             f"{system_role}\n"
