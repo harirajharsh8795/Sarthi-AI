@@ -22,7 +22,7 @@ class ConfidenceService:
             return {
                 "confidence_score": 0.0,
                 "confidence_label": "No Confidence",
-                "reason": "Query fell below relevance threshold. Skyped LLM generation."
+                "reason": "Query fell below relevance threshold. Skipped LLM generation."
             }
 
         if not chunks:

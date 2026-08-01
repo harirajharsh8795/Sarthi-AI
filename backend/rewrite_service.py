@@ -33,6 +33,9 @@ class RewriteService:
         Rewrites context-dependent queries using conversation history.
         Uses fast heuristic matching to avoid blocking LLM timeouts.
         """
+        text_lower = query.lower()
+        if any(doc_term in text_lower for doc_term in ["report", "pdf", "document", "file", "upload"]):
+            return query
         if not history or not self.needs_rewrite(query):
             return query
 
@@ -41,8 +44,9 @@ class RewriteService:
         words = re.findall(r'\b[a-zA-Z\u0900-\u097f]+\b', query_clean)
         pure_keywords = {
             "hinglish", "hindi", "english", "translate", "explain", "detail", "details", 
-            "batao", "samjhao", "kro", "karo", "please", "more", "elaborate", "in", "me", 
-            "se", "pe", "par", "plz", "cro", "caro", "explaination", "explanation"
+            "batao", "btao", "samjhao", "kro", "karo", "please", "more", "elaborate", "in", "me", 
+            "se", "pe", "par", "plz", "cro", "caro", "explaination", "explanation",
+            "short", "brief", "aur", "ko", "ka", "ki", "ke", "chote", "fast", "summary"
         }
         if words and all(w in pure_keywords for w in words):
             for m in reversed(history[:-1]):
@@ -50,14 +54,7 @@ class RewriteService:
                     logger.info(f"Heuristic query rewrite: '{query}' -> '{m['content']}'")
                     return m["content"]
 
-        # Only append previous query context if query is very short (< 4 words) and context-dependent
-        if len(words) <= 4:
-            for m in reversed(history[:-1]):
-                if m.get("role") == "user" and m.get("content", "").strip():
-                    prev_text = m["content"].strip()
-                    logger.info(f"Contextual query append: '{query}' -> '{prev_text} ({query})'")
-                    return f"{prev_text} {query}"
-
         return query
+
 
 rewrite_service = RewriteService()

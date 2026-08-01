@@ -22,16 +22,16 @@ class RankingService:
         ).lower()
         domain = str(metadata.get("domain", "")).lower()
         
-        # Government sources / official portals
-        if "gazette" in source_name or "govt" in source_name or "india.gov" in source_name:
+        # Local curated .md knowledge base files have top priority
+        if source_name.endswith(".md") or source_name.endswith(".txt") or "kb_md_" in source_name:
             return 1.0
-        if "rbi" in source_name or "nhm" in source_name or "mohfw" in source_name:
-            return 0.98
         # User uploaded docs
         if metadata.get("collection") == "user_docs" or "user_upload" in domain:
-            return 0.95
-        # Standard public library docs
-        return 0.90
+            return 0.98
+        # External PDF manuals / public library docs
+        return 0.75
+
+
 
     def compute_keyword_overlap(self, query: str, chunk_text: str) -> float:
         """Calculates token overlap ratio between query terms and text."""
@@ -56,12 +56,12 @@ class RankingService:
             overlap = self.compute_keyword_overlap(query, c["text"])
             trust = self.get_source_trust_score(c)
             
-            # Filter out completely irrelevant chunks (similarity < 0.20 and zero keyword overlap)
-            if sim < 0.20 and overlap == 0.0:
+            # Filter out completely irrelevant chunks (similarity < 0.25 and zero keyword overlap)
+            if sim < 0.25 and overlap == 0.0:
                 continue
 
-            # Multiplicative hybrid score: 70% similarity, 30% keyword overlap, with minor trust multiplier (0.95 to 1.0)
-            base_score = (sim * 0.70) + (overlap * 0.30)
+            # Multiplicative hybrid score: 65% similarity, 35% keyword overlap, with minor trust multiplier (0.95 to 1.0)
+            base_score = (sim * 0.65) + (overlap * 0.35)
             trust_multiplier = 0.95 + (trust * 0.05)
             hybrid_score = base_score * trust_multiplier
             

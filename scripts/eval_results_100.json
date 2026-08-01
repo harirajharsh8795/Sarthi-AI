@@ -1,0 +1,1907 @@
+{
+  "total": 100,
+  "passed": 100,
+  "failed": 0,
+  "results": [
+    {
+      "num": 1,
+      "query": "pet dard ki dva btao",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\stomach_pain.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\kidney\\kidney_stone.md",
+        "medical\\symptoms\\diarrhea.md",
+        "medical\\symptoms\\vomiting.md",
+        "medical\\anatomy\\stomach.md",
+        "medical\\medicines\\ibuprofen.md",
+        "medical\\liver\\fatty_liver.md"
+      ],
+      "time_ms": 168262.66,
+      "status": "PASSED"
+    },
+    {
+      "num": 2,
+      "query": "bukhar me kya karna chahiye?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\infectious_diseases\\typhoid.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\infectious_diseases\\measles.md",
+        "medical\\infectious_diseases\\dengue.md",
+        "medical\\infectious_diseases\\influenza.md"
+      ],
+      "time_ms": 4568.61,
+      "status": "PASSED"
+    },
+    {
+      "num": 3,
+      "query": "मुझे तेज बुखार और सिरदर्द है, क्या प्राथमिक उपचार करूं?",
+      "domain": "Medical",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\fever.md",
+        "medical\\child_health\\vaccination.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\cancer\\blood_cancer.md",
+        "medical\\infectious_diseases\\measles.md",
+        "medical\\symptoms\\headache.md",
+        "medical\\medicines\\antibiotics.md",
+        "medical\\symptoms\\headache.md"
+      ],
+      "time_ms": 409.3,
+      "status": "PASSED"
+    },
+    {
+      "num": 4,
+      "query": "What are the early symptoms of Dengue fever?",
+      "domain": "Medical",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\diarrhea.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\anatomy\\human_body.md",
+        "medical\\infectious_diseases\\dengue.md",
+        "medical\\infectious_diseases\\dengue.md",
+        "medical\\infectious_diseases\\dengue.md"
+      ],
+      "time_ms": 375.24,
+      "status": "PASSED"
+    },
+    {
+      "num": 5,
+      "query": "khansi aur gale me kharash ki home remedy btao",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\fatty_liver.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\infectious_diseases\\influenza.md",
+        "medical\\anatomy\\lungs.md",
+        "medical\\medicines\\vaccine.md",
+        "medical\\heart\\angina.md",
+        "medical\\infectious_diseases\\measles.md",
+        "medical\\medicines\\paracetamol.md"
+      ],
+      "time_ms": 528.93,
+      "status": "PASSED"
+    },
+    {
+      "num": 6,
+      "query": "blood pressure high hone par kya dawai lein?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\dizziness.md",
+        "medical\\chronic_diseases\\hypertension.md",
+        "medical\\anatomy\\heart.md",
+        "medical\\chronic_diseases\\hypertension.md",
+        "medical\\symptoms\\stomach_pain.md",
+        "medical\\chronic_diseases\\diabetes.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\liver\\fatty_liver.md"
+      ],
+      "time_ms": 384.95,
+      "status": "PASSED"
+    },
+    {
+      "num": 7,
+      "query": "मधुमेह (Diabetes) के मुख्य लक्षण क्या होते हैं?",
+      "domain": "Medical",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\chronic_diseases\\diabetes.md",
+        "medical\\chronic_diseases\\diabetes.md",
+        "medical\\chronic_diseases\\diabetes.md",
+        "medical\\medicines\\insulin.md",
+        "medical\\diagnostic_tests\\blood_sugar.md",
+        "medical\\anatomy\\human_body.md",
+        "medical\\medicines\\insulin.md",
+        "medical\\diagnostic_tests\\blood_sugar.md"
+      ],
+      "time_ms": 816.99,
+      "status": "PASSED"
+    },
+    {
+      "num": 8,
+      "query": "What is the recommended first aid for minor skin burns?",
+      "domain": "Medical",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\first_aid\\burns.md",
+        "medical\\first_aid\\burns.md",
+        "medical\\first_aid\\burns.md",
+        "medical\\first_aid\\burns.md",
+        "medical\\anatomy\\skin.md",
+        "medical\\first_aid\\snake_bite.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\anatomy\\skin.md"
+      ],
+      "time_ms": 790.42,
+      "status": "PASSED"
+    },
+    {
+      "num": 9,
+      "query": "vomiting aur loose motion rokne ke liye kya karein",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\constipation.md",
+        "medical\\symptoms\\vomiting.md",
+        "medical\\symptoms\\diarrhea.md",
+        "medical\\symptoms\\vomiting.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\symptoms\\weight_loss.md",
+        "medical\\symptoms\\diarrhea.md",
+        "medical\\symptoms\\vomiting.md"
+      ],
+      "time_ms": 1001.08,
+      "status": "PASSED"
+    },
+    {
+      "num": 10,
+      "query": "acidity aur chest pain me kya antar hai?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\constipation.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\symptoms\\dizziness.md",
+        "medical\\symptoms\\stomach_pain.md",
+        "medical\\symptoms\\chest_pain.md",
+        "medical\\liver\\fatty_liver.md",
+        "medical\\heart\\angina.md",
+        "medical\\mental_health\\anxiety.md"
+      ],
+      "time_ms": 894.32,
+      "status": "PASSED"
+    },
+    {
+      "num": 11,
+      "query": "मलेरिया बुखार के क्या लक्षण होते हैं?",
+      "domain": "Medical",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\infectious_diseases\\malaria.md",
+        "medical\\sexual_health\\hiv_testing.md",
+        "medical\\infectious_diseases\\malaria.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\infectious_diseases\\measles.md",
+        "medical\\symptoms\\diarrhea.md"
+      ],
+      "time_ms": 966.34,
+      "status": "PASSED"
+    },
+    {
+      "num": 12,
+      "query": "How to prevent dehydration during severe fever?",
+      "domain": "Medical",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\diarrhea.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\diarrhea.md",
+        "medical\\anatomy\\human_body.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\weakness.md"
+      ],
+      "time_ms": 2013.57,
+      "status": "PASSED"
+    },
+    {
+      "num": 13,
+      "query": "serum bilirubin high hone ka kya matlab hai?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\jaundice.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\diagnostic_tests\\lft.md",
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\diagnostic_tests\\blood_sugar.md",
+        "medical\\infectious_diseases\\tuberculosis.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\kidney\\kidney_failure.md"
+      ],
+      "time_ms": 1944.73,
+      "status": "PASSED"
+    },
+    {
+      "num": 14,
+      "query": "SGPT aur SGOT level badhne par kya parhez karein?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\first_aid\\poisoning.md",
+        "medical\\kidney\\uti.md",
+        "medical\\infectious_diseases\\malaria.md",
+        "medical\\liver\\fatty_liver.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\heart\\heart_attack.md",
+        "medical\\first_aid\\burns.md",
+        "medical\\infectious_diseases\\cholera.md"
+      ],
+      "time_ms": 1176.42,
+      "status": "PASSED"
+    },
+    {
+      "num": 15,
+      "query": "HBsAg Non Reactive hone ka kya arth hai?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\fatty_liver.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\infectious_diseases\\measles.md",
+        "medical\\first_aid\\poisoning.md",
+        "medical\\infectious_diseases\\cholera.md",
+        "medical\\infectious_diseases\\malaria.md",
+        "medical\\symptoms\\dizziness.md",
+        "medical\\heart\\angina.md"
+      ],
+      "time_ms": 988.86,
+      "status": "PASSED"
+    },
+    {
+      "num": 16,
+      "query": "HIV rapid test Non Reactive hai to kya patient safe hai?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\sexual_health\\hiv_testing.md",
+        "medical\\infectious_diseases\\hiv.md",
+        "medical\\infectious_diseases\\hiv.md",
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\cancer\\cervical_cancer.md",
+        "medical\\sexual_health\\hiv_testing.md",
+        "medical\\sexual_health\\hiv_testing.md"
+      ],
+      "time_ms": 750.88,
+      "status": "PASSED"
+    },
+    {
+      "num": 17,
+      "query": "HCV Spot test Negative aane par kya next test zaroori hai?",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\medicines\\vaccine.md",
+        "medical\\women_health\\menopause.md",
+        "medical\\infectious_diseases\\chickenpox.md",
+        "medical\\women_health\\pcos.md",
+        "medical\\liver\\fatty_liver.md",
+        "medical\\sexual_health\\premature_ejaculation.md",
+        "medical\\sexual_health\\yeast_infection.md",
+        "medical\\infectious_diseases\\aids.md"
+      ],
+      "time_ms": 1590.1,
+      "status": "PASSED"
+    },
+    {
+      "num": 18,
+      "query": "सिर दर्द और चक्कर आने पर क्या घरेलू उपाय करें?",
+      "domain": "Medical",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\headache.md",
+        "medical\\symptoms\\headache.md",
+        "medical\\symptoms\\headache.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\headache.md",
+        "medical\\symptoms\\dizziness.md",
+        "medical\\mental_health\\stress.md",
+        "medical\\chronic_diseases\\epilepsy.md"
+      ],
+      "time_ms": 1265.99,
+      "status": "PASSED"
+    },
+    {
+      "num": 19,
+      "query": "What precautions should be taken for viral infection?",
+      "domain": "Medical",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\medicines\\vaccine.md",
+        "medical\\infectious_diseases\\chickenpox.md",
+        "medical\\infectious_diseases\\hepatitis.md",
+        "medical\\first_aid\\dog_bite.md",
+        "medical\\sexual_health\\sti.md",
+        "medical\\child_health\\vaccination.md",
+        "medical\\cancer\\cervical_cancer.md",
+        "medical\\cancer\\cervical_cancer.md"
+      ],
+      "time_ms": 760.85,
+      "status": "PASSED"
+    },
+    {
+      "num": 20,
+      "query": "chote bachon me bukhar hone par patti kaise rkhein",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\symptoms\\dizziness.md",
+        "medical\\infectious_diseases\\chickenpox.md",
+        "medical\\infectious_diseases\\dengue.md",
+        "medical\\infectious_diseases\\measles.md"
+      ],
+      "time_ms": 2014.91,
+      "status": "PASSED"
+    },
+    {
+      "num": 21,
+      "query": "typhoid fever me konsa khana khana chahiye",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\infectious_diseases\\typhoid.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\medicines\\antibiotics.md",
+        "medical\\infectious_diseases\\measles.md",
+        "medical\\infectious_diseases\\typhoid.md",
+        "medical\\infectious_diseases\\dengue.md"
+      ],
+      "time_ms": 1914.94,
+      "status": "PASSED"
+    },
+    {
+      "num": 22,
+      "query": "आंखों में जलन और लालिमा का क्या इलाज है?",
+      "domain": "Medical",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\infectious_diseases\\hepatitis.md",
+        "medical\\infectious_diseases\\chickenpox.md",
+        "medical\\sexual_health\\low_libido.md",
+        "medical\\sexual_health\\yeast_infection.md",
+        "medical\\sexual_health\\low_libido.md",
+        "medical\\chronic_diseases\\hypertension.md",
+        "medical\\sexual_health\\premature_ejaculation.md",
+        "medical\\sexual_health\\penis_health.md"
+      ],
+      "time_ms": 1111.81,
+      "status": "PASSED"
+    },
+    {
+      "num": 23,
+      "query": "What are the common causes of high cholesterol?",
+      "domain": "Medical",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\chronic_diseases\\obesity.md",
+        "medical\\anatomy\\pancreas.md",
+        "medical\\chronic_diseases\\arthritis.md",
+        "medical\\chronic_diseases\\diabetes.md",
+        "medical\\anatomy\\liver.md",
+        "medical\\anatomy\\skeleton.md",
+        "medical\\chronic_diseases\\hypertension.md",
+        "medical\\anatomy\\muscles.md"
+      ],
+      "time_ms": 1576.63,
+      "status": "PASSED"
+    },
+    {
+      "num": 24,
+      "query": "jaundice (pilia) ke symptoms aur ilaj btao",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\symptoms\\constipation.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\liver\\jaundice.md",
+        "medical\\infectious_diseases\\hepatitis.md",
+        "medical\\medicines\\vaccine.md",
+        "medical\\liver\\fatty_liver.md",
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\infectious_diseases\\rabies.md"
+      ],
+      "time_ms": 629.2,
+      "status": "PASSED"
+    },
+    {
+      "num": 25,
+      "query": "kidney stone me kitna pani pina chahiye",
+      "domain": "Medical",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\kidney\\kidney_stone.md",
+        "medical\\anatomy\\kidney.md",
+        "medical\\kidney\\kidney_failure.md",
+        "medical\\kidney\\kidney_stone.md",
+        "medical\\cancer\\blood_cancer.md",
+        "medical\\diagnostic_tests\\kft.md",
+        "medical\\heart\\heart_failure.md",
+        "medical\\diagnostic_tests\\ct_scan.md"
+      ],
+      "time_ms": 728.4,
+      "status": "PASSED"
+    },
+    {
+      "num": 26,
+      "query": "How to update KYC in bank account?",
+      "domain": "Banking",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\accounts\\zero_balance.md"
+      ],
+      "time_ms": 1054.79,
+      "status": "PASSED"
+    },
+    {
+      "num": 27,
+      "query": "bank account me kyc update karne ke liye konse documents zaroori hain?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\others\\faq.md",
+        "banking\\others\\banking_forms.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\accounts\\dormant_account.md",
+        "banking\\payments\\digital_wallet.md"
+      ],
+      "time_ms": 824.93,
+      "status": "PASSED"
+    },
+    {
+      "num": 28,
+      "query": "बैंक खाते में केवाईसी (KYC) कराने की क्या प्रक्रिया है?",
+      "domain": "Banking",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\investments\\recurring_deposit.md",
+        "banking\\others\\banking_glossary.md"
+      ],
+      "time_ms": 939.77,
+      "status": "PASSED"
+    },
+    {
+      "num": 29,
+      "query": "What is the procedure for reporting unauthorized ATM transaction?",
+      "domain": "Banking",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\criminal_law\\bns\\extortion.md",
+        "banking\\cyber_security\\reporting_fraud.md",
+        "legal\\criminal_law\\bns\\cheating.md",
+        "legal\\criminal_law\\cyber_crime\\fake_call.md",
+        "legal\\criminal_law\\cyber_crime\\otp_scam.md",
+        "legal\\criminal_law\\bns\\forgery.md",
+        "legal\\criminal_law\\cyber_crime\\online_fraud.md",
+        "legal\\criminal_law\\cyber_crime\\upi_fraud.md"
+      ],
+      "time_ms": 1133.21,
+      "status": "PASSED"
+    },
+    {
+      "num": 30,
+      "query": "unauthorized transaction hone par rbi rules ke according kitne ghante me complaint karein?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\consumer_law\\refund.md",
+        "banking\\rbi\\rbi_notifications.md",
+        "legal\\consumer_law\\refund.md",
+        "banking\\compliance\\kyc.md",
+        "legal\\criminal_law\\cyber_crime\\upi_fraud.md",
+        "legal\\criminal_law\\bns\\forgery.md",
+        "legal\\criminal_law\\bns\\cheating.md",
+        "banking\\grievance\\complaints.md"
+      ],
+      "time_ms": 711.09,
+      "status": "PASSED"
+    },
+    {
+      "num": 31,
+      "query": "atm card kho jane par block kaise karein?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\cards\\card_block.md",
+        "banking\\cards\\card_block.md",
+        "banking\\cards\\card_block.md",
+        "banking\\payments\\aeps.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\cyber_security\\atm_fraud.md",
+        "banking\\cards\\mastercard.md",
+        "banking\\cards\\pin_reset.md"
+      ],
+      "time_ms": 539.68,
+      "status": "PASSED"
+    },
+    {
+      "num": 32,
+      "query": "बैंक से एजुकेशन लोन लेने की क्या पात्रता है?",
+      "domain": "Banking",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\loans\\personal_loan.md",
+        "banking\\loans\\business_loan.md",
+        "banking\\loans\\foreclosure.md",
+        "banking\\loans\\loan_default.md",
+        "banking\\loans\\vehicle_loan.md",
+        "banking\\loans\\vehicle_loan.md",
+        "banking\\loans\\vehicle_loan.md",
+        "banking\\loans\\home_loan.md"
+      ],
+      "time_ms": 584.12,
+      "status": "PASSED"
+    },
+    {
+      "num": 33,
+      "query": "What is RBI Ombudsman scheme for banking complaints?",
+      "domain": "Banking",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\grievance\\ombudsman.md",
+        "banking\\loans\\loan_recovery.md",
+        "banking\\compliance\\customer_rights.md",
+        "banking\\compliance\\customer_rights.md",
+        "banking\\rbi\\rbi_notifications.md",
+        "banking\\cards\\credit_card.md",
+        "legal\\criminal_law\\cyber_crime\\upi_fraud.md",
+        "banking\\grievance\\complaints.md"
+      ],
+      "time_ms": 347.06,
+      "status": "PASSED"
+    },
+    {
+      "num": 34,
+      "query": "cheque bounce hone par legal action kaise liya jata hai?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\loans\\loan_default.md",
+        "banking\\rbi\\rbi_notifications.md",
+        "banking\\payments\\cheque.md",
+        "banking\\payments\\cheque.md",
+        "banking\\payments\\aeps.md",
+        "banking\\00_overview\\indian_banking_system.md",
+        "banking\\grievance\\complaints.md",
+        "banking\\rbi\\rbi_functions.md"
+      ],
+      "time_ms": 368.0,
+      "status": "PASSED"
+    },
+    {
+      "num": 35,
+      "query": "saving account aur current account me kya difference hai?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\accounts\\current_account.md",
+        "banking\\accounts\\savings_account.md",
+        "banking\\accounts\\minor_account.md",
+        "banking\\accounts\\salary_account.md",
+        "banking\\accounts\\zero_balance.md",
+        "banking\\accounts\\account_closure.md",
+        "banking\\accounts\\joint_account.md",
+        "banking\\accounts\\dormant_account.md"
+      ],
+      "time_ms": 323.34,
+      "status": "PASSED"
+    },
+    {
+      "num": 36,
+      "query": "फिक्स्ड डिपॉजिट (FD) पर टीडीएस कटने के क्या नियम हैं?",
+      "domain": "Banking",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\investments\\fixed_deposit.md",
+        "banking\\others\\banking_forms.md",
+        "banking\\loans\\vehicle_loan.md",
+        "banking\\accounts\\nri_account.md",
+        "banking\\rbi\\rbi_notifications.md",
+        "banking\\loans\\business_loan.md",
+        "banking\\payments\\cheque.md",
+        "banking\\investments\\recurring_deposit.md"
+      ],
+      "time_ms": 667.16,
+      "status": "PASSED"
+    },
+    {
+      "num": 37,
+      "query": "How to file complaint against bank manager to RBI?",
+      "domain": "Banking",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\grievance\\complaints.md",
+        "banking\\others\\faq.md",
+        "banking\\grievance\\ombudsman.md",
+        "banking\\compliance\\customer_rights.md",
+        "banking\\grievance\\ombudsman.md",
+        "banking\\rbi\\rbi_functions.md",
+        "legal\\criminal_law\\cyber_crime\\social_media_crime.md",
+        "legal\\criminal_law\\cyber_crime\\otp_scam.md"
+      ],
+      "time_ms": 747.21,
+      "status": "PASSED"
+    },
+    {
+      "num": 38,
+      "query": "ifsc code aur micr code me kya antar hai?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\others\\calculators.md",
+        "banking\\cyber_security\\digital_arrest.md",
+        "banking\\payments\\qr_payment.md",
+        "banking\\loans\\cibil_score.md",
+        "banking\\00_overview\\indian_banking_system.md",
+        "banking\\cyber_security\\sim_swap.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\00_overview\\disclaimer.md"
+      ],
+      "time_ms": 677.39,
+      "status": "PASSED"
+    },
+    {
+      "num": 39,
+      "query": "home loan foreclosure process aur charges kya hain?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\loans\\home_loan.md",
+        "banking\\loans\\foreclosure.md",
+        "banking\\loans\\loan_default.md",
+        "banking\\loans\\foreclosure.md",
+        "banking\\loans\\foreclosure.md",
+        "banking\\loans\\foreclosure.md",
+        "banking\\compliance\\customer_rights.md",
+        "banking\\rbi\\repo_rate.md"
+      ],
+      "time_ms": 1398.15,
+      "status": "PASSED"
+    },
+    {
+      "num": 40,
+      "query": "बैंक अकाउंट डोरमेंट (Dormant) होने पर चालू कैसे कराएं?",
+      "domain": "Banking",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\cards\\debit_card.md",
+        "banking\\accounts\\account_closure.md",
+        "banking\\accounts\\zero_balance.md",
+        "banking\\investments\\recurring_deposit.md",
+        "banking\\accounts\\savings_account.md",
+        "banking\\payments\\cheque.md",
+        "banking\\payments\\imps.md",
+        "banking\\accounts\\minor_account.md"
+      ],
+      "time_ms": 630.3,
+      "status": "PASSED"
+    },
+    {
+      "num": 41,
+      "query": "What official valid documents (OVD) are accepted for bank KYC?",
+      "domain": "Banking",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\00_overview\\banking_basics.md",
+        "banking\\investments\\recurring_deposit.md"
+      ],
+      "time_ms": 588.76,
+      "status": "PASSED"
+    },
+    {
+      "num": 42,
+      "query": "credit card bill payment due date miss hone par kitna penalty lagta hai?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\cards\\card_limits.md",
+        "banking\\payments\\neft.md",
+        "banking\\investments\\recurring_deposit.md",
+        "banking\\cards\\credit_card.md",
+        "banking\\loans\\loan_default.md",
+        "banking\\loans\\loan_default.md",
+        "banking\\accounts\\account_closure.md",
+        "banking\\payments\\digital_wallet.md"
+      ],
+      "time_ms": 629.82,
+      "status": "PASSED"
+    },
+    {
+      "num": 43,
+      "query": "net banking password forget hone par reset kaise karein?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\cards\\pin_reset.md",
+        "banking\\cards\\card_limits.md",
+        "banking\\compliance\\kyc.md",
+        "banking\\accounts\\dormant_account.md",
+        "banking\\payments\\neft.md",
+        "banking\\cards\\debit_card.md",
+        "banking\\investments\\senior_citizen_scheme.md",
+        "banking\\cards\\card_fraud.md"
+      ],
+      "time_ms": 488.89,
+      "status": "PASSED"
+    },
+    {
+      "num": 44,
+      "query": "जन धन खाता खोलने के क्या फायदे हैं?",
+      "domain": "Banking",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\accounts\\savings_account.md",
+        "banking\\others\\government_schemes.md",
+        "banking\\investments\\fixed_deposit.md",
+        "banking\\insurance\\term_insurance.md",
+        "banking\\investments\\nps.md",
+        "banking\\compliance\\aml.md",
+        "banking\\payments\\cheque.md",
+        "banking\\accounts\\current_account.md"
+      ],
+      "time_ms": 293.97,
+      "status": "PASSED"
+    },
+    {
+      "num": 45,
+      "query": "How long does bank take to refund failed UPI transaction?",
+      "domain": "Banking",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\payments\\neft.md",
+        "banking\\investments\\recurring_deposit.md",
+        "banking\\payments\\imps.md",
+        "banking\\accounts\\account_closure.md",
+        "banking\\payments\\upi.md",
+        "banking\\others\\faq.md",
+        "banking\\rbi\\repo_rate.md",
+        "banking\\grievance\\ombudsman.md"
+      ],
+      "time_ms": 413.43,
+      "status": "PASSED"
+    },
+    {
+      "num": 46,
+      "query": "minor bank account me guardian details kaise add karein?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\accounts\\minor_account.md",
+        "banking\\accounts\\savings_account.md",
+        "banking\\others\\faq.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\accounts\\zero_balance.md",
+        "banking\\accounts\\salary_account.md",
+        "banking\\accounts\\zero_balance.md",
+        "banking\\accounts\\minor_account.md"
+      ],
+      "time_ms": 405.52,
+      "status": "PASSED"
+    },
+    {
+      "num": 47,
+      "query": "bank me nominee name kaise update ya change karein?",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\cards\\pin_reset.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\others\\faq.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\accounts\\dormant_account.md",
+        "banking\\payments\\neft.md",
+        "banking\\cards\\pin_reset.md",
+        "banking\\others\\banking_glossary.md"
+      ],
+      "time_ms": 395.12,
+      "status": "PASSED"
+    },
+    {
+      "num": 48,
+      "query": "सुरक्षा बीमा योजना (PMSBY) के क्या नियम हैं?",
+      "domain": "Banking",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\insurance\\life_insurance.md",
+        "banking\\insurance\\term_insurance.md",
+        "banking\\insurance\\vehicle_insurance.md",
+        "banking\\insurance\\vehicle_insurance.md",
+        "banking\\insurance\\term_insurance.md",
+        "banking\\insurance\\claim_process.md",
+        "banking\\insurance\\claim_process.md",
+        "banking\\insurance\\life_insurance.md"
+      ],
+      "time_ms": 333.22,
+      "status": "PASSED"
+    },
+    {
+      "num": 49,
+      "query": "What is the interest rate calculation method for savings account?",
+      "domain": "Banking",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\accounts\\savings_account.md",
+        "banking\\accounts\\salary_account.md",
+        "banking\\accounts\\minor_account.md",
+        "banking\\accounts\\current_account.md",
+        "banking\\accounts\\savings_account.md",
+        "banking\\accounts\\savings_account.md",
+        "banking\\payments\\cheque.md",
+        "banking\\investments\\fixed_deposit.md"
+      ],
+      "time_ms": 680.01,
+      "status": "PASSED"
+    },
+    {
+      "num": 50,
+      "query": "passbook print aur statement nikalne ka tareeka btao",
+      "domain": "Banking",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "banking\\payments\\aeps.md",
+        "banking\\00_overview\\disclaimer.md",
+        "banking\\others\\banking_forms.md",
+        "banking\\rbi\\rbi_notifications.md",
+        "banking\\cards\\rupay.md",
+        "banking\\loans\\emi.md",
+        "banking\\cards\\mastercard.md",
+        "banking\\payments\\aeps.md"
+      ],
+      "time_ms": 864.51,
+      "status": "PASSED"
+    },
+    {
+      "num": 51,
+      "query": "What is the procedure to file an RTI application?",
+      "domain": "Legal",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\constitution\\right_to_information.md",
+        "legal\\labour_law\\esi.md",
+        "legal\\intellectual_property.md",
+        "legal\\family_law\\maintenance.md",
+        "legal\\constitution\\supreme_court.md",
+        "legal\\immigration.md",
+        "legal\\property_law\\builder_dispute.md",
+        "legal\\judgments.md"
+      ],
+      "time_ms": 1164.77,
+      "status": "PASSED"
+    },
+    {
+      "num": 52,
+      "query": "RTI application kaise file karein aur kitne din me jawab milta hai?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\property_law\\partition.md",
+        "legal\\immigration.md",
+        "legal\\intellectual_property.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\criminal_law\\sexual_offences\\voyeurism.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\consumer_law\\consumer_rights.md",
+        "legal\\criminal_law\\sexual_offences\\pocso.md"
+      ],
+      "time_ms": 804.98,
+      "status": "PASSED"
+    },
+    {
+      "num": 53,
+      "query": "सूचना का अधिकार (RTI) आवेदन पत्र कैसे लिखें?",
+      "domain": "Legal",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\constitution\\right_to_information.md",
+        "legal\\labour_law\\esi.md",
+        "legal\\labour_law\\gratuity.md",
+        "legal\\family_law\\will.md",
+        "legal\\taxation.md",
+        "legal\\family_law\\maintenance.md",
+        "legal\\constitution\\supreme_court.md",
+        "legal\\judgments.md"
+      ],
+      "time_ms": 708.02,
+      "status": "PASSED"
+    },
+    {
+      "num": 54,
+      "query": "police station me FIR darj na karne par kya karein?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\faq.md",
+        "legal\\legal_glossary.md",
+        "legal\\police\\complaint.md",
+        "legal\\police\\police_notice.md",
+        "legal\\police\\interrogation.md",
+        "legal\\police\\police_notice.md",
+        "legal\\police\\zero_fir.md",
+        "legal\\criminal_law\\bns\\robbery.md"
+      ],
+      "time_ms": 669.36,
+      "status": "PASSED"
+    },
+    {
+      "num": 55,
+      "query": "What are the consumer rights under Consumer Protection Act 2019?",
+      "domain": "Legal",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\consumer_law\\consumer_rights.md",
+        "legal\\consumer_law\\complaint_process.md",
+        "legal\\consumer_law\\defective_products.md",
+        "legal\\consumer_law\\consumer_court.md",
+        "legal\\consumer_law\\consumer_rights.md",
+        "legal\\consumer_law\\online_shopping.md",
+        "legal\\consumer_law\\refund.md",
+        "legal\\consumer_law\\consumer_rights.md"
+      ],
+      "time_ms": 593.6,
+      "status": "PASSED"
+    },
+    {
+      "num": 56,
+      "query": "consumer court me complaint file karne ka process btao",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\consumer_law\\complaint_process.md",
+        "legal\\consumer_law\\consumer_rights.md",
+        "legal\\consumer_law\\consumer_rights.md",
+        "legal\\consumer_law\\consumer_court.md",
+        "legal\\consumer_law\\refund.md",
+        "legal\\consumer_law\\complaint_process.md",
+        "legal\\consumer_law\\defective_products.md",
+        "legal\\consumer_law\\complaint_process.md"
+      ],
+      "time_ms": 738.91,
+      "status": "PASSED"
+    },
+    {
+      "num": 57,
+      "query": "उपभोक्ता फोरम में ऑनलाइन शिकायत कैसे दर्ज करें?",
+      "domain": "Legal",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\consumer_law\\complaint_process.md",
+        "legal\\consumer_law\\complaint_process.md",
+        "legal\\consumer_law\\consumer_rights.md",
+        "legal\\consumer_law\\refund.md",
+        "legal\\consumer_law\\complaint_process.md",
+        "legal\\consumer_law\\warranty.md",
+        "legal\\consumer_law\\online_shopping.md",
+        "legal\\consumer_law\\complaint_process.md"
+      ],
+      "time_ms": 779.77,
+      "status": "PASSED"
+    },
+    {
+      "num": 58,
+      "query": "What is the difference between bailable and non-bailable offence?",
+      "domain": "Legal",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\bail.md",
+        "legal\\police\\bail.md",
+        "legal\\police\\bail.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\legal_glossary.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\police\\bail.md",
+        "legal\\police\\bail.md"
+      ],
+      "time_ms": 658.46,
+      "status": "PASSED"
+    },
+    {
+      "num": 59,
+      "query": "anticipatory bail (अग्रिम जमानत) lene ke kya rules hain?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\bail.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\police\\bail.md",
+        "legal\\police\\bail.md",
+        "legal\\police\\bail.md",
+        "legal\\police\\bail.md",
+        "legal\\police\\rights_after_arrest.md"
+      ],
+      "time_ms": 610.19,
+      "status": "PASSED"
+    },
+    {
+      "num": 60,
+      "query": "civil court aur criminal court me kya antar hota hai?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\criminal_law\\bns\\defamation.md",
+        "legal\\constitution\\supreme_court.md",
+        "legal\\case_laws.md",
+        "legal\\case_laws.md",
+        "legal\\legal_forms.md",
+        "legal\\00_overview\\legal_system_india.md",
+        "legal\\constitution\\high_court.md",
+        "legal\\constitution\\high_court.md"
+      ],
+      "time_ms": 615.38,
+      "status": "PASSED"
+    },
+    {
+      "num": 61,
+      "query": "मुफ्त कानूनी सहायता (Legal Aid) प्राप्त करने के क्या नियम हैं?",
+      "domain": "Legal",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\constitution\\fundamental_rights.md",
+        "legal\\police\\rights_after_arrest.md",
+        "legal\\00_overview\\disclaimer.md",
+        "legal\\00_overview\\citizen_rights.md",
+        "legal\\police\\arrest.md",
+        "legal\\property_law\\eviction.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\family_law\\divorce.md"
+      ],
+      "time_ms": 717.89,
+      "status": "PASSED"
+    },
+    {
+      "num": 62,
+      "query": "How to get a certified copy of court order or judgment?",
+      "domain": "Legal",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\judgments.md",
+        "legal\\police\\arrest.md",
+        "legal\\case_laws.md",
+        "legal\\legal_templates.md",
+        "legal\\family_law\\maintenance.md",
+        "legal\\constitution\\supreme_court.md",
+        "legal\\consumer_law\\complaint_process.md",
+        "legal\\constitution\\high_court.md"
+      ],
+      "time_ms": 635.99,
+      "status": "PASSED"
+    },
+    {
+      "num": 63,
+      "query": "tenant eviction aur rent dispute me kya kanooni rights hain?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\property_law\\eviction.md",
+        "legal\\property_law\\eviction.md",
+        "legal\\property_law\\eviction.md",
+        "legal\\property_law\\eviction.md",
+        "legal\\property_law\\eviction.md",
+        "legal\\property_law\\encroachment.md",
+        "legal\\property_law\\lease.md",
+        "legal\\property_law\\lease.md"
+      ],
+      "time_ms": 646.88,
+      "status": "PASSED"
+    },
+    {
+      "num": 64,
+      "query": "cyber fraud complaint cybercrime portal par kaise karein?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\consumer_law\\online_shopping.md",
+        "legal\\criminal_law\\cyber_crime\\online_fraud.md",
+        "legal\\criminal_law\\cyber_crime\\upi_fraud.md",
+        "legal\\criminal_law\\cyber_crime\\fake_call.md",
+        "legal\\criminal_law\\cyber_crime\\sim_swap.md",
+        "legal\\criminal_law\\bns\\cheating.md",
+        "legal\\criminal_law\\cyber_crime\\digital_arrest.md",
+        "legal\\criminal_law\\cyber_crime\\ransomware.md"
+      ],
+      "time_ms": 544.78,
+      "status": "PASSED"
+    },
+    {
+      "num": 65,
+      "query": "महिला सुरक्षा कानून और 1090 हेल्पलाइन के अधिकार क्या हैं?",
+      "domain": "Legal",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\women_rights.md",
+        "legal\\police\\women_rights.md",
+        "legal\\family_law\\dowry.md",
+        "legal\\criminal_law\\sexual_offences\\consent.md",
+        "legal\\police\\women_rights.md",
+        "legal\\family_law\\domestic_violence.md",
+        "legal\\constitution\\fundamental_duties.md",
+        "legal\\criminal_law\\sexual_offences\\rape_laws.md"
+      ],
+      "time_ms": 671.54,
+      "status": "PASSED"
+    },
+    {
+      "num": 66,
+      "query": "What is zero FIR and where can it be registered?",
+      "domain": "Legal",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\zero_fir.md",
+        "legal\\faq.md",
+        "legal\\police\\zero_fir.md",
+        "legal\\police\\fir.md",
+        "legal\\police\\zero_fir.md",
+        "legal\\police\\zero_fir.md",
+        "legal\\criminal_law\\sexual_offences\\consent.md",
+        "legal\\criminal_law\\bns\\forgery.md"
+      ],
+      "time_ms": 540.44,
+      "status": "PASSED"
+    },
+    {
+      "num": 67,
+      "query": "property registration aur stamp duty ke kanooni niyam btao",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\property_law\\registry.md",
+        "legal\\property_law\\registry.md",
+        "legal\\property_law\\land.md",
+        "legal\\property_law\\encroachment.md",
+        "legal\\property_law\\registry.md",
+        "legal\\property_law\\land.md",
+        "legal\\property_law\\registry.md",
+        "legal\\property_law\\mutation.md"
+      ],
+      "time_ms": 587.64,
+      "status": "PASSED"
+    },
+    {
+      "num": 68,
+      "query": "will (वसीयत) ko legally valid banane ke liye kya zaroori hai?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\consumer_law\\refund.md",
+        "legal\\family_law\\will.md",
+        "legal\\immigration.md",
+        "legal\\00_overview\\disclaimer.md",
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\family_law\\dowry.md",
+        "legal\\family_law\\will.md",
+        "legal\\constitution\\preamble.md"
+      ],
+      "time_ms": 638.44,
+      "status": "PASSED"
+    },
+    {
+      "num": 69,
+      "query": "मानवाधिकार आयोग (NHRC) में शिकायत कैसे दर्ज कराएं?",
+      "domain": "Legal",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\interrogation.md",
+        "legal\\police\\senior_citizen_rights.md",
+        "legal\\labour_law\\workplace_harassment.md",
+        "legal\\00_overview\\citizen_rights.md",
+        "legal\\family_law\\dowry.md",
+        "legal\\criminal_law\\sexual_offences\\consent.md",
+        "legal\\labour_law\\workplace_harassment.md",
+        "legal\\criminal_law\\sexual_offences\\rape_laws.md"
+      ],
+      "time_ms": 226.69,
+      "status": "PASSED"
+    },
+    {
+      "num": 70,
+      "query": "What are the legal remedies for breach of contract?",
+      "domain": "Legal",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\criminal_law\\bns\\cheating.md",
+        "legal\\labour_law\\gratuity.md",
+        "legal\\labour_law\\termination.md",
+        "legal\\consumer_law\\consumer_rights.md",
+        "legal\\consumer_law\\consumer_court.md",
+        "legal\\faq.md",
+        "legal\\property_law\\rent.md",
+        "legal\\labour_law\\termination.md"
+      ],
+      "time_ms": 325.06,
+      "status": "PASSED"
+    },
+    {
+      "num": 71,
+      "query": "domestic violence act ke tehat mahila ko kya suraksha milti hai?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\family_law\\domestic_violence.md",
+        "legal\\family_law\\domestic_violence.md",
+        "legal\\family_law\\live_in_relationship.md",
+        "legal\\family_law\\dowry.md",
+        "legal\\family_law\\live_in_relationship.md",
+        "legal\\family_law\\dowry.md",
+        "legal\\criminal_law\\sexual_offences\\pocso.md",
+        "legal\\family_law\\live_in_relationship.md"
+      ],
+      "time_ms": 1102.43,
+      "status": "PASSED"
+    },
+    {
+      "num": 72,
+      "query": "lok adalat me case resolve karwane ke kya fayde hain?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\anticipatory_bail.md",
+        "legal\\criminal_law\\sexual_offences\\voyeurism.md",
+        "legal\\criminal_law\\sexual_offences\\pocso.md",
+        "legal\\family_law\\dowry.md",
+        "legal\\legal_forms.md",
+        "legal\\immigration.md",
+        "legal\\constitution\\supreme_court.md",
+        "legal\\judgments.md"
+      ],
+      "time_ms": 1271.41,
+      "status": "PASSED"
+    },
+    {
+      "num": 73,
+      "query": "श्रमिकों के न्यूनतम वेतन कानून (Minimum Wages Act) के नियम क्या हैं?",
+      "domain": "Legal",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\labour_law\\overtime.md",
+        "legal\\labour_law\\salary.md",
+        "legal\\labour_law\\overtime.md",
+        "legal\\labour_law\\labour_codes.md",
+        "legal\\labour_law\\salary.md",
+        "legal\\labour_law\\termination.md",
+        "legal\\labour_law\\salary.md",
+        "legal\\labour_law\\gratuity.md"
+      ],
+      "time_ms": 868.57,
+      "status": "PASSED"
+    },
+    {
+      "num": 74,
+      "query": "What is the procedure for mutual consent divorce in India?",
+      "domain": "Legal",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\family_law\\divorce.md",
+        "legal\\family_law\\divorce.md",
+        "legal\\family_law\\marriage.md",
+        "legal\\family_law\\child_custody.md",
+        "legal\\family_law\\live_in_relationship.md",
+        "legal\\family_law\\divorce.md",
+        "legal\\family_law\\succession.md",
+        "legal\\property_law\\partition.md"
+      ],
+      "time_ms": 605.88,
+      "status": "PASSED"
+    },
+    {
+      "num": 75,
+      "query": "police arrest ke time par citizen ke kya 5 mukhya adhikar hain?",
+      "domain": "Legal",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\arrest.md",
+        "legal\\police\\arrest.md",
+        "legal\\police\\rights_after_arrest.md",
+        "legal\\00_overview\\citizen_rights.md",
+        "legal\\police\\arrest.md",
+        "legal\\police\\search_and_seizure.md",
+        "legal\\police\\arrest.md",
+        "legal\\police\\police_notice.md"
+      ],
+      "time_ms": 727.72,
+      "status": "PASSED"
+    },
+    {
+      "num": 76,
+      "query": "report ko summarize kro",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\diagnostic_tests\\kft.md",
+        "medical\\cancer\\prostate_cancer.md",
+        "medical\\symptoms\\swelling.md",
+        "medical\\child_health\\nutrition.md",
+        "medical\\heart\\arrhythmia.md",
+        "medical\\cancer\\skin_cancer.md",
+        "medical\\medicines\\antibiotics.md",
+        "medical\\sexual_health\\puberty.md"
+      ],
+      "time_ms": 762.05,
+      "status": "PASSED"
+    },
+    {
+      "num": 77,
+      "query": "reeport ko smjhao ache se",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\first_aid\\burns.md",
+        "medical\\infectious_diseases\\malaria.md",
+        "medical\\first_aid\\poisoning.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\heart\\heart_attack.md",
+        "medical\\infectious_diseases\\cholera.md",
+        "medical\\cancer\\prostate_cancer.md",
+        "medical\\medicines\\paracetamol.md"
+      ],
+      "time_ms": 486.31,
+      "status": "PASSED"
+    },
+    {
+      "num": 78,
+      "query": "is report me patient ka naam aur age kya hai?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\fatty_liver.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\00_overview\\overview.md",
+        "medical\\diagnostic_tests\\ct_scan.md",
+        "medical\\liver\\liver_cancer.md",
+        "medical\\heart\\atherosclerosis.md",
+        "medical\\first_aid\\snake_bite.md",
+        "medical\\first_aid\\burns.md"
+      ],
+      "time_ms": 570.5,
+      "status": "PASSED"
+    },
+    {
+      "num": 79,
+      "query": "HBsAG test ka result kya aaya hai report me?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\diagnostic_tests\\blood_sugar.md",
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\symptoms\\swelling.md",
+        "medical\\liver\\fatty_liver.md",
+        "medical\\00_overview\\overview.md",
+        "medical\\medicines\\paracetamol.md"
+      ],
+      "time_ms": 476.82,
+      "status": "PASSED"
+    },
+    {
+      "num": 80,
+      "query": "HIV aur HCV test positive hai ya negative?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\sexual_health\\hiv_testing.md",
+        "medical\\infectious_diseases\\hiv.md",
+        "medical\\infectious_diseases\\hiv.md",
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\cancer\\cervical_cancer.md",
+        "medical\\sexual_health\\hiv_testing.md",
+        "medical\\sexual_health\\hiv_testing.md",
+        "medical\\infectious_diseases\\aids.md"
+      ],
+      "time_ms": 667.78,
+      "status": "PASSED"
+    },
+    {
+      "num": 81,
+      "query": "Serum Bilirubin total aur direct kitna hai report me?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\jaundice.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\diagnostic_tests\\lft.md",
+        "medical\\infectious_diseases\\tuberculosis.md",
+        "medical\\diagnostic_tests\\blood_sugar.md",
+        "medical\\kidney\\kidney_failure.md"
+      ],
+      "time_ms": 552.55,
+      "status": "PASSED"
+    },
+    {
+      "num": 82,
+      "query": "SGPT aur SGOT level normal hain ya high hain?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\fatty_liver.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\symptoms\\dizziness.md",
+        "medical\\child_health\\vaccination.md",
+        "medical\\heart\\arrhythmia.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\mental_health\\bipolar.md",
+        "medical\\first_aid\\burns.md"
+      ],
+      "time_ms": 471.4,
+      "status": "PASSED"
+    },
+    {
+      "num": 83,
+      "query": "What is the lab report conclusion for Santosh Devi?",
+      "domain": "Document",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\sexual_health\\erectile_dysfunction.md",
+        "medical\\sexual_health\\yeast_infection.md",
+        "medical\\cancer\\cancer_overview.md",
+        "medical\\sexual_health\\penis_health.md",
+        "medical\\kidney\\kidney_failure.md",
+        "medical\\sexual_health\\sexual_myths.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\liver\\liver_cancer.md"
+      ],
+      "time_ms": 518.32,
+      "status": "PASSED"
+    },
+    {
+      "num": 84,
+      "query": "is document me Holy Family Hospital ke doctor ka naam kya likha hai?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "common\\medical_terms.md",
+        "common\\multilingual_dictionary.md",
+        "common\\glossary.md",
+        "common\\medical_terms.md",
+        "medical\\child_health\\vaccination.md",
+        "medical\\diagnostic_tests\\ct_scan.md",
+        "medical\\first_aid\\choking.md",
+        "common\\medical_terms.md"
+      ],
+      "time_ms": 643.15,
+      "status": "PASSED"
+    },
+    {
+      "num": 85,
+      "query": "इस रिपोर्ट में मुख्य जांच परिणाम क्या हैं?",
+      "domain": "Document",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\police\\fir.md",
+        "legal\\criminal_law\\bns\\murder.md",
+        "legal\\criminal_law\\cyber_crime\\fake_call.md",
+        "legal\\criminal_law\\cyber_crime\\sim_swap.md",
+        "banking\\cyber_security\\reporting_fraud.md",
+        "legal\\criminal_law\\bns\\theft.md",
+        "legal\\criminal_law\\bns\\forgery.md",
+        "banking\\compliance\\aml.md"
+      ],
+      "time_ms": 628.22,
+      "status": "PASSED"
+    },
+    {
+      "num": 86,
+      "query": "bill number aur sample date btao report me se",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "common\\disclaimer.md",
+        "medical\\symptoms\\fever.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\infectious_diseases\\tuberculosis.md",
+        "medical\\diagnostic_tests\\lft.md",
+        "common\\emergency_contacts.md",
+        "medical\\infectious_diseases\\tuberculosis.md",
+        "medical\\kidney\\kidney_failure.md"
+      ],
+      "time_ms": 581.06,
+      "status": "PASSED"
+    },
+    {
+      "num": 87,
+      "query": "Alkaline phosphatase aur Total protein values btao",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\diagnostic_tests\\blood_sugar.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\diagnostic_tests\\lft.md",
+        "medical\\diagnostic_tests\\lft.md",
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\diagnostic_tests\\kft.md",
+        "medical\\infectious_diseases\\tuberculosis.md"
+      ],
+      "time_ms": 488.2,
+      "status": "PASSED"
+    },
+    {
+      "num": 88,
+      "query": "is PDF ka poora summary do clean format me",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "legal\\legal_templates.md",
+        "legal\\family_law\\maintenance.md",
+        "legal\\00_overview\\disclaimer.md",
+        "medical\\00_overview\\how_to_use.md",
+        "legal\\legal_forms.md",
+        "common\\glossary.md",
+        "legal\\police\\anticipatory_bail.md",
+        "banking\\others\\banking_forms.md"
+      ],
+      "time_ms": 715.33,
+      "status": "PASSED"
+    },
+    {
+      "num": 89,
+      "query": "what does Non Reactive mean in this blood report?",
+      "domain": "Document",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\diagnostic_tests\\blood_sugar.md",
+        "medical\\kidney\\kidney_failure.md",
+        "medical\\symptoms\\weakness.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\first_aid\\cpr.md",
+        "medical\\kidney\\kidney_failure.md"
+      ],
+      "time_ms": 619.47,
+      "status": "PASSED"
+    },
+    {
+      "num": 90,
+      "query": "kya is report me koi abnomal test result hai?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\symptoms\\swelling.md",
+        "medical\\women_health\\breastfeeding.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\liver\\fatty_liver.md",
+        "medical\\sexual_health\\nocturnal_emission.md",
+        "medical\\symptoms\\vomiting.md",
+        "medical\\cancer\\prostate_cancer.md"
+      ],
+      "time_ms": 633.74,
+      "status": "PASSED"
+    },
+    {
+      "num": 91,
+      "query": "patient Type IPD hai ya OPD report me?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\diagnostic_tests\\ct_scan.md",
+        "medical\\liver\\liver_cancer.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\liver\\fatty_liver.md",
+        "medical\\heart\\atherosclerosis.md",
+        "medical\\diagnostic_tests\\lft.md",
+        "medical\\00_overview\\overview.md",
+        "medical\\diagnostic_tests\\hba1c.md"
+      ],
+      "time_ms": 389.48,
+      "status": "PASSED"
+    },
+    {
+      "num": 92,
+      "query": "is document me doctor ne kya adviced diya hai?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "common\\multilingual_dictionary.md",
+        "medical\\first_aid\\choking.md",
+        "medical\\diagnostic_tests\\ct_scan.md",
+        "medical\\child_health\\vaccination.md",
+        "medical\\medicines\\paracetamol.md",
+        "common\\medical_terms.md",
+        "medical\\00_overview\\overview.md",
+        "medical\\chronic_diseases\\diabetes.md"
+      ],
+      "time_ms": 484.37,
+      "status": "PASSED"
+    },
+    {
+      "num": 93,
+      "query": "क्या रिपोर्ट में यकृत (Liver) के सभी एंजाइम सामान्य हैं?",
+      "domain": "Document",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\anatomy\\liver.md",
+        "medical\\anatomy\\liver.md",
+        "medical\\cancer\\liver_cancer.md",
+        "medical\\diagnostic_tests\\lft.md",
+        "medical\\liver\\liver_cancer.md",
+        "medical\\anatomy\\liver.md",
+        "medical\\liver\\cirrhosis.md",
+        "medical\\diagnostic_tests\\lft.md"
+      ],
+      "time_ms": 560.52,
+      "status": "PASSED"
+    },
+    {
+      "num": 94,
+      "query": "Please summarize all key lab findings in emoji bullet points",
+      "domain": "Document",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\cirrhosis.md",
+        "medical\\liver\\liver_cancer.md",
+        "banking\\planning\\financial_literacy.md",
+        "banking\\cyber_security\\atm_fraud.md",
+        "medical\\symptoms\\weakness.md",
+        "banking\\others\\calculators.md",
+        "banking\\others\\calculators.md",
+        "medical\\anatomy\\pancreas.md"
+      ],
+      "time_ms": 696.56,
+      "status": "PASSED"
+    },
+    {
+      "num": 95,
+      "query": "is file me test name aur result table me btao",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\diagnostic_tests\\lft.md",
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\diagnostic_tests\\cbc.md",
+        "medical\\diagnostic_tests\\blood_sugar.md",
+        "medical\\diagnostic_tests\\hba1c.md",
+        "medical\\diagnostic_tests\\kft.md",
+        "banking\\payments\\aeps.md",
+        "medical\\symptoms\\fever.md"
+      ],
+      "time_ms": 547.66,
+      "status": "PASSED"
+    },
+    {
+      "num": 96,
+      "query": "Serology test me kon konsi bimarion ki jaanch hui hai?",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\liver\\fatty_liver.md",
+        "medical\\infectious_diseases\\aids.md",
+        "medical\\symptoms\\constipation.md",
+        "medical\\medicines\\paracetamol.md",
+        "medical\\liver\\liver_cancer.md",
+        "medical\\sexual_health\\premature_ejaculation.md",
+        "medical\\symptoms\\weight_loss.md",
+        "medical\\sexual_health\\nocturnal_emission.md"
+      ],
+      "time_ms": 549.03,
+      "status": "PASSED"
+    },
+    {
+      "num": 97,
+      "query": "what is the report date and approval time?",
+      "domain": "Document",
+      "lang": "English",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\sexual_health\\condoms.md",
+        "common\\glossary.md",
+        "common\\disclaimer.md",
+        "common\\legal_terms.md",
+        "common\\medical_terms.md",
+        "medical\\infectious_diseases\\rabies.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\child_health\\diarrhea.md"
+      ],
+      "time_ms": 585.75,
+      "status": "PASSED"
+    },
+    {
+      "num": 98,
+      "query": "is report ka main takeaway btao",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\00_overview\\how_to_use.md",
+        "medical\\diagnostic_tests\\ecg.md",
+        "medical\\00_overview\\medical_disclaimer.md",
+        "medical\\infectious_diseases\\aids.md",
+        "common\\medical_terms.md",
+        "medical\\anatomy\\human_body.md",
+        "medical\\heart\\arrhythmia.md",
+        "medical\\mental_health\\stress.md"
+      ],
+      "time_ms": 695.75,
+      "status": "PASSED"
+    },
+    {
+      "num": 99,
+      "query": "क्या इसमें किसी गंभीर बीमारी के संकेत हैं?",
+      "domain": "Document",
+      "lang": "Hindi",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\women_health\\pcos.md",
+        "medical\\anatomy\\human_body.md",
+        "medical\\infectious_diseases\\rabies.md",
+        "medical\\symptoms\\cough.md",
+        "medical\\women_health\\menopause.md",
+        "medical\\symptoms\\dizziness.md",
+        "medical\\symptoms\\vomiting.md",
+        "medical\\symptoms\\swelling.md"
+      ],
+      "time_ms": 559.73,
+      "status": "PASSED"
+    },
+    {
+      "num": 100,
+      "query": "explain this uploaded lab report in simple Hindi/Hinglish",
+      "domain": "Document",
+      "lang": "Hinglish",
+      "chunks_used": 8,
+      "sources": [
+        "medical\\00_overview\\overview.md",
+        "medical\\infectious_diseases\\typhoid.md",
+        "medical\\anatomy\\liver.md",
+        "medical\\child_health\\pneumonia.md",
+        "common\\glossary.md",
+        "medical\\00_overview\\medical_disclaimer.md",
+        "medical\\anatomy\\muscles.md",
+        "medical\\00_overview\\how_to_use.md"
+      ],
+      "time_ms": 375.52,
+      "status": "PASSED"
+    }
+  ]
+}

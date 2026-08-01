@@ -144,7 +144,7 @@ Query 4: "Mujhe bukhar hai, kya dawai leni chahiye?"
 |---|---|
 | **Frontend** | React 18 + Vite + Tailwind CSS + Framer Motion |
 | **Backend** | Python 3.10+ FastAPI + Uvicorn |
-| **SLM Inference Engine** | Llama 3.2 1B via local Ollama API (`num_ctx: 1024`) |
+| **SLM Inference Engine** | Llama 3.2 1B via local Ollama API (`num_ctx: 4096`) |
 | **Embedding Model** | `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` |
 | **Vector Database** | ChromaDB (Local Persistent Storage) |
 | **Metadata Database** | SQLite (WAL Mode enabled) |

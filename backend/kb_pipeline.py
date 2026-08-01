@@ -30,15 +30,21 @@ import pytesseract
 from PIL import Image, ImageOps, ImageEnhance
 import session_manager
 
-# Tesseract executable configuration for Windows
-TESSERACT_PATHS = [
-    r"C:\Users\HP\AppData\Local\Programs\Tesseract-OCR\tesseract.exe",
-    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-]
-for path in TESSERACT_PATHS:
-    if os.path.exists(path):
-        pytesseract.pytesseract.tesseract_cmd = path
-        break
+# Tesseract executable configuration (Cross-platform with Windows fallback)
+import shutil
+system_tess = shutil.which("tesseract")
+if system_tess:
+    pytesseract.pytesseract.tesseract_cmd = system_tess
+else:
+    user_profile = os.environ.get("USERPROFILE", "")
+    TESSERACT_PATHS = [
+        os.path.join(user_profile, r"AppData\Local\Programs\Tesseract-OCR\tesseract.exe"),
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    ]
+    for path in TESSERACT_PATHS:
+        if os.path.exists(path):
+            pytesseract.pytesseract.tesseract_cmd = path
+            break
 
 # Paths
 DATA_DIR = "./data"
@@ -445,145 +451,133 @@ def extract_text_from_docx(docx_path):
 
 def extract_text_from_image_ocr(image_path):
     """
-    Improved OCR extraction with DPI upscaling and smarter preprocessing
-    specifically tuned for scanned medical lab reports.
-    Filters out low-confidence garbage words to avoid hallucination-inducing noise.
+    Robust OCR extraction with DPI upscaling and smart preprocessing
+    specifically tuned for scanned medical lab reports and documents.
+    Supports PNG, JPG, WEBP, and JPEG image formats.
     """
     from PIL import ImageFilter
     import numpy as np
 
-    img = Image.open(image_path)
+    try:
+        img = Image.open(image_path)
+    except Exception as e:
+        logger.error(f"Failed to open image for OCR: {e}")
+        return "", 0.0
 
-    # 1. Upscale small images to at least 300 DPI equivalent width for better OCR accuracy
+    # 1. Upscale small images to at least 1800px width for better OCR character recognition
     orig_w, orig_h = img.size
-    TARGET_W = 1800  # target width for good OCR
+    TARGET_W = 1800
     if orig_w < TARGET_W:
         scale = TARGET_W / orig_w
         new_w = int(orig_w * scale)
         new_h = int(orig_h * scale)
         img = img.resize((new_w, new_h), Image.LANCZOS)
 
-    # 2. Grayscale
+    # 2. Grayscale & Contrast enhancement
     gray = ImageOps.grayscale(img)
-
-    # 3. Mild sharpening to improve character edges in scanned docs
     sharpened = gray.filter(ImageFilter.SHARPEN)
-
-    # 4. Autocontrast to normalize brightness across the whole scan
     contrasted = ImageOps.autocontrast(sharpened, cutoff=2)
 
-    # 5. Smart binarization — only apply if background is clearly white (bright image)
+    # 3. Binarization
     img_np = np.array(contrasted)
     mean_val = np.mean(img_np)
-    # For bright documents (mean > 160), binarize gently; for darker scans keep greyscale
     if mean_val > 160:
         threshold = int(mean_val * 0.85)
-        binarized = contrasted.point(lambda p: 255 if p > threshold else 0)
+        processed_img = contrasted.point(lambda p: 255 if p > threshold else 0)
     else:
-        binarized = contrasted  # Use greyscale for darker/lower-contrast scans
+        processed_img = contrasted
 
-    def run_ocr(image_obj, lang="eng"):
-        """Run Tesseract OCR and return (text, mean_confidence)."""
+    def _do_pytesseract(image_obj, psm_mode=3, lang="eng+hin"):
+        try:
+            direct_text = pytesseract.image_to_string(
+                image_obj, lang=lang,
+                config=f"--oem 3 --psm {psm_mode}"
+            ).strip()
+        except Exception:
+            try:
+                direct_text = pytesseract.image_to_string(
+                    image_obj, lang="eng",
+                    config=f"--oem 3 --psm {psm_mode}"
+                ).strip()
+            except Exception:
+                direct_text = ""
+
         try:
             data = pytesseract.image_to_data(
                 image_obj, lang=lang,
-                config="--oem 3 --psm 6",
+                config=f"--oem 3 --psm {psm_mode}",
                 output_type=pytesseract.Output.DICT
             )
         except Exception:
             try:
                 data = pytesseract.image_to_data(
-                    image_obj, lang=lang,
-                    config="--oem 3 --psm 6",
+                    image_obj, lang="eng",
+                    config=f"--oem 3 --psm {psm_mode}",
                     output_type=pytesseract.Output.DICT
                 )
             except Exception:
-                return "", 0.0
+                data = {}
 
-            lines = {}
-            confidences = []
-            for i in range(len(data.get("text", []))):
-                word = (data.get("text", [""])[i] or "").strip()
-                conf_raw = data.get("conf", ["-1"])[i]
-                try:
-                    conf = float(conf_raw)
-                except Exception:
-                    # Some tesseract builds return '-1' or '' for numeric confs
-                    conf = -1.0
+        lines = {}
+        confidences = []
+        for i in range(len(data.get("text", []))):
+            word = (data.get("text", [""])[i] or "").strip()
+            conf_raw = data.get("conf", ["-1"])[i]
+            try:
+                conf = float(conf_raw)
+            except Exception:
+                conf = -1.0
 
-                # Skip empty words and very low confidence garbage (< 40)
-                if not word or conf < 40:
-                    continue
+            if not word:
+                continue
 
-                line_key = (
-                    data.get("page_num", [1])[i],
-                    data.get("block_num", [0])[i],
-                    data.get("par_num", [0])[i],
-                    data.get("line_num", [0])[i],
-                )
-                lines.setdefault(line_key, []).append(word)
-                if conf > 0:
-                    confidences.append(float(conf))
+            line_key = (
+                data.get("page_num", [1])[i],
+                data.get("block_num", [0])[i],
+                data.get("par_num", [0])[i],
+                data.get("line_num", [0])[i],
+            )
+            lines.setdefault(line_key, []).append(word)
+            if conf > 0:
+                confidences.append(float(conf))
 
-            sorted_keys = sorted(lines.keys())
-            text = "\n".join(" ".join(lines[k]) for k in sorted_keys)
-            mean_conf = sum(confidences) / len(confidences) if confidences else 0.0
-            return text, mean_conf
-            text, mean_conf = text_en, conf_en
+        sorted_keys = sorted(lines.keys())
+        data_text = "\n".join(" ".join(lines[k]) for k in sorted_keys).strip()
+        mean_conf_out = sum(confidences) / len(confidences) if confidences else 70.0
+        
+        # Pick the longer / more complete text between direct string extraction and structured line extraction
+        best_text = direct_text if len(direct_text) > len(data_text) else data_text
+        return best_text, mean_conf_out
 
-    # Final fallback: raw image_to_string on original (unprocessed)
-    if len(text.strip()) < 30:
-        try:
-            raw = pytesseract.image_to_string(img, lang="eng+hin", config="--oem 3 --psm 6")
-            if not raw.strip():
-                raw = pytesseract.image_to_string(img, lang="eng", config="--oem 3 --psm 6")
-            if len(raw.strip()) > len(text.strip()):
-                text = raw.strip()
-                mean_conf = 70.0
-        except Exception as ex:
-            logger.debug(f"Final OCR fallback failed: {ex}")
+    # Multi-pass OCR: try PSM 3 (auto layout) first, then PSM 6, then PSM 11
+    text, mean_conf = _do_pytesseract(processed_img, psm_mode=3)
+    if len(text.strip()) < 40:
+        text_psm6, conf6 = _do_pytesseract(processed_img, psm_mode=6)
+        if len(text_psm6.strip()) > len(text.strip()):
+            text, mean_conf = text_psm6, conf6
 
-    # If Tesseract produced too little text or low confidence, try EasyOCR as a robust fallback
-    if (len(text.strip()) < 60 or mean_conf < 50.0):
+    # Fallback pass on original image
+    if len(text.strip()) < 40:
+        raw_text, raw_conf = _do_pytesseract(img, psm_mode=3)
+        if len(raw_text.strip()) > len(text.strip()):
+            text, mean_conf = raw_text, raw_conf
+
+    # EasyOCR fallback if Tesseract yields under 50 characters
+    if len(text.strip()) < 50:
         try:
             import easyocr
-
-            # Reader auto-detects GPU if available; limit to languages we expect
             reader = easyocr.Reader(['en', 'hi'], gpu=False)
-            # easyocr expects either path or numpy array
-            try:
-                img_np = np.array(img.convert('RGB'))
-            except Exception:
-                img_np = None
-
-            easy_text_blocks = []
-            easy_confs = []
-            if img_np is not None:
-                results = reader.readtext(img_np)
-                # results: list of (bbox, text, confidence)
-                # Group results by their approximate y-coordinate to form lines
-                lines_by_y = {}
-                for bbox, txt, conf in results:
-                    # bbox is list of 4 points [[x1,y1],[x2,y2],...]
-                    y = int(sum([p[1] for p in bbox]) / 4)
-                    lines_by_y.setdefault(y, []).append((bbox, txt, conf))
-                    easy_confs.append(float(conf) * 100.0)  # scale to 0-100
-
-                for y in sorted(lines_by_y.keys()):
-                    parts = [t for _, t, _ in sorted(lines_by_y[y], key=lambda x: x[0][0][0])]
-                    easy_text_blocks.append(" ".join(parts))
-
-            easy_text = "\n".join(easy_text_blocks).strip()
-            easy_mean_conf = sum(easy_confs) / len(easy_confs) if easy_confs else 0.0
-
-            # Prefer EasyOCR if it returns more readable text
-            if len(easy_text) > len(text) and easy_mean_conf > mean_conf:
+            results = reader.readtext(image_path)
+            easy_lines = [res[1] for res in results if res[2] > 0.15]
+            easy_text = "\n".join(easy_lines).strip()
+            if len(easy_text) > len(text):
                 text = easy_text
-                mean_conf = easy_mean_conf
+                mean_conf = 80.0
         except Exception as ex:
-            logger.debug(f"EasyOCR fallback failed or not installed: {ex}")
+            logger.debug(f"EasyOCR fallback not used: {ex}")
 
     return text, mean_conf
+
 
 
 import hashlib

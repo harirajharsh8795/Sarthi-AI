@@ -36,7 +36,6 @@ from prompt_guard import prompt_guard
 from file_security import file_security_validator
 from rate_limit import rate_limiter
 from audit_service import audit_trail_service
-from logger_config import logger
 
 logger = logging.getLogger("saarthi.api")
 
@@ -860,7 +859,7 @@ def health_check():
             
         # System Resource timings
         mem = psutil.virtual_memory()
-        disk = psutil.disk_usage("/")
+        disk = psutil.disk_usage(os.path.abspath("."))
         
         health_cache = {
             "status": "healthy",

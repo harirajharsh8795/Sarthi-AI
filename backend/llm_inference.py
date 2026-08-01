@@ -72,12 +72,15 @@ def _generate_answer_stream_inner(
         yield {"type": "done", "data": {}}
         return
 
-    # 1. Query Understanding
+    # 1. Query Understanding & Conversation Resolution
     import uuid
+    if session_id:
+        conversation_id = session_manager.ensure_conversation_exists(conversation_id or "new", session_id, title=query[:100])
+
     if conversation_id:
         user_msg_id = f"msg_{uuid.uuid4().hex[:8]}"
         try:
-            session_manager.save_message(user_msg_id, conversation_id, "user", query)
+            session_manager.save_message(user_msg_id, conversation_id, "user", query, session_id=session_id or "default_session")
         except Exception as e:
             logger.error(f"Failed to save user message: {e}")
 
@@ -138,9 +141,9 @@ def _generate_answer_stream_inner(
     user_doc_chunks_used = sum(1 for c in context_chunks if c["collection"] == "user_docs")
     knowledge_base_chunks_used = sum(1 for c in context_chunks if c["collection"] == "knowledge_base")
     
-    # Limit context chunks to top 4 for optimal grounding and inference speed
+    # Limit context chunks to top 6 for grounded evidence
     if context_chunks:
-        context_chunks = context_chunks[:4]
+        context_chunks = context_chunks[:6]
     else:
         context_chunks = []
 
@@ -162,8 +165,7 @@ def _generate_answer_stream_inner(
     if lang == "Hinglish":
         prompt = (
             "IMPORTANT: Respond ONLY in natural, friendly Hinglish. "
-            "Give a clear helpful answer — do NOT repeat the user's original question words in every sentence. "
-            "In Hinglish: 'pet' = stomach, 'dard/drd' = pain, 'dva/dvai/dawa' = medicine, 'bukhar' = fever.\n\n"
+            "Give a clear, helpful, well-structured answer.\n\n"
         ) + prompt
     else:
         prompt = f"IMPORTANT: You MUST respond ONLY in {lang}. Do not switch languages under any circumstances.\n\n" + prompt
@@ -178,11 +180,14 @@ def _generate_answer_stream_inner(
         "prompt": prompt,
         "stream": True,
         "options": {
-            "temperature": 0.2,
+            "temperature": 0.1,
             "top_p": 0.9,
-            "num_ctx": 2048,
+            "top_k": 40,
+            "num_ctx": 4096,
             "num_predict": 512,
-            "repeat_penalty": 1.1
+            "repeat_penalty": 1.25,
+            "presence_penalty": 0.5,
+            "frequency_penalty": 0.5
         }
     }
     
@@ -202,8 +207,8 @@ def _generate_answer_stream_inner(
                 total_tokens += 1
                 token_buffer += token
                 
-                # Buffer tokens (2 chars or word boundary) for ultra-fast, smooth streaming
-                if len(token_buffer) >= 2 or " " in token_buffer or "\n" in token_buffer or data.get("done", False):
+                # Stream token immediately for instant response without buffering delay
+                if token_buffer:
                     yield {
                         "type": "token",
                         "data": {"token": token_buffer}
@@ -211,12 +216,6 @@ def _generate_answer_stream_inner(
                     token_buffer = ""
                 
                 if data.get("done", False):
-                    if token_buffer:
-                        yield {
-                            "type": "token",
-                            "data": {"token": token_buffer}
-                        }
-                        token_buffer = ""
                     break
     except Exception as e:
         import traceback

@@ -114,16 +114,20 @@ def is_document_about_query(query: str) -> bool:
     query_lower = query.lower()
     trigger_phrases = [
         "pdf", "document", "uploaded file", "is file", "jo upload",
-        "summary", "samjhao", "explain", "kya hai", "kya likha",
-        "summarize", "summarise", "about this", "brief", "reprort",
+        "summary", "summarize", "summarise", "about this doc", "reprort",
         "repot", "report", "mera document", "uploaded", "my file", 
-        "this doc", "this file", "analyze", "analyse", "overview",
-        "check", "batao", "read", "describe", "details", "extract"
+        "this doc", "this file", "in the pdf", "in the document", "file me",
+        "doc me", "pdf me"
     ]
     return any(phrase in query_lower for phrase in trigger_phrases)
 
 
-def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None, n: int = 6) -> list:
+def force_retrieve_user_doc_chunks(
+    session_id: str,
+    conversation_id: str = None,
+    document_ids: list[str] = None,
+    n: int = 6,
+) -> list:
     """
     Queries user_docs ChromaDB collection with where filter matching session and conversation
     and NO query embedding. Orders results by page_number and chunk_index.
@@ -131,8 +135,6 @@ def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None,
     """
     collection = kb_pipeline.get_user_docs_collection()
     where_filter = {"session_id": session_id}
-    if conversation_id:
-        where_filter = {"$and": [{"session_id": session_id}, {"conversation_id": conversation_id}]}
     results = collection.get(
         where=where_filter,
         include=["metadatas", "documents"]
@@ -145,6 +147,8 @@ def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None,
     metadatas = results.get('metadatas', [])
     documents = results.get('documents', [])
     
+    allowed_document_ids = set(document_ids or [])
+
     for i in range(len(results['ids'])):
         meta = metadatas[i]
         text = documents[i]
@@ -153,6 +157,10 @@ def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None,
         language = meta.get('language') or 'en'
         page_num = meta.get('page_number') or 1
         chunk_index = meta.get('chunk_index') or 0
+        document_id = meta.get('document_id')
+
+        if allowed_document_ids and document_id and document_id not in allowed_document_ids:
+            continue
         
         chunks.append({
             "text": text,
@@ -161,6 +169,7 @@ def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None,
             "language": language,
             "page_number": page_num,
             "chunk_index": chunk_index,
+            "document_id": document_id,
             "collection": "user_docs",
             "similarity_score": 1.0
         })
@@ -169,23 +178,44 @@ def force_retrieve_user_doc_chunks(session_id: str, conversation_id: str = None,
     chunks = sorted(chunks, key=lambda x: (x["page_number"], x.get("chunk_index", 0)))
     return chunks[:n]
 
+def _get_latest_session_document_ids(session_id: str, conversation_id: str = None) -> list:
+    """Returns the most recently uploaded non-deleted document IDs for a session."""
+    docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
+    if not docs:
+        return []
+
+    docs = sorted(docs, key=lambda d: d.get("uploaded_at") or "", reverse=True)
+    return [docs[0].get("id")] if docs[0].get("id") else []
+
 def retrieve_context(query: str, session_id: str | None, conversation_id: str | None = None, query_language: str = None, query_domain: str = None) -> dict:
     """
     Exposes primary RAG retrieval interface.
     1. Expands incoming query using glossary.
     2. Generates multilingual embeddings.
-    3. Retrieves from user_docs and knowledge_base.
-    4. Filters results by MIN_SIMILARITY_SCORE using exact Cosine Similarity.
-    5. Prioritizes user_docs over knowledge_base.
-    6. Returns up to 10 final context chunks.
+    3. Retrieves from user_docs (strictly scoped to active conversation) and knowledge_base.
+    4. Filters results using exact Cosine Similarity and local .md file priority.
     """
     session_valid = check_session_exists(session_id)
     
-    # Check if this is a document summary/explanation request and the session has documents
-    if session_valid and is_document_about_query(query):
-        docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
-        if docs:
-            forced_chunks = force_retrieve_user_doc_chunks(session_id, conversation_id, n=6)
+    # Check if the ACTIVE conversation has uploaded documents
+    active_conv_docs = []
+    if session_valid and conversation_id:
+        active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
+
+    # If the active conversation HAS uploaded documents OR query is document-related:
+    # Force retrieval of the active conversation's documents and DO NOT pull docs from other conversations!
+    if session_valid and (active_conv_docs or is_document_about_query(query)):
+        doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
+        if not doc_ids_to_use:
+            doc_ids_to_use = _get_latest_session_document_ids(session_id, conversation_id=conversation_id)
+
+        if doc_ids_to_use:
+            forced_chunks = force_retrieve_user_doc_chunks(
+                session_id,
+                conversation_id=conversation_id,
+                document_ids=doc_ids_to_use,
+                n=8,
+            )
             if forced_chunks:
                 return {
                     "expanded_query": expand_query_with_glossary(query),
@@ -206,15 +236,16 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     norm_q = float(np.linalg.norm(query_emb_np))
     query_embedding = query_emb_np.tolist()
     
-    # 3. Retrieve from user_docs if session exists
+    # 3. Retrieve from user_docs ONLY IF active conversation has uploaded documents
     user_chunks = []
     
-    if session_valid:
+    if session_valid and active_conv_docs:
         user_collection = kb_pipeline.get_user_docs_collection()
-        where_filter = {"session_id": session_id}
+        where_conditions = [{"session_id": session_id}]
         if conversation_id:
-            where_filter = {"$and": [{"session_id": session_id}, {"conversation_id": conversation_id}]}
-        # Retrieve up to top_k = 8
+            where_conditions.append({"conversation_id": conversation_id})
+        where_filter = {"$and": where_conditions} if len(where_conditions) > 1 else where_conditions[0]
+
         results_user = user_collection.query(
             query_embeddings=[query_embedding],
             n_results=8,
@@ -223,11 +254,9 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         )
         user_chunks = process_results(results_user, "user_docs", norm_q)
         
-        # User Doc Topic Filter (Fix 1 Addendum):
-        # If this is not an explicit document summary query, exclude weak user document chunks (similarity < 0.50)
-        # to prevent unrelated uploads from appearing in general queries.
         if not is_document_about_query(query):
-            user_chunks = [c for c in user_chunks if c["similarity_score"] >= 0.50]
+            user_chunks = [c for c in user_chunks if c["similarity_score"] >= 0.30]
+
         
     # 4. Retrieve from knowledge_base with domain filtering
     query_lower = query.lower()
@@ -253,7 +282,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     try:
         query_kwargs = {
             "query_embeddings": [query_embedding],
-            "n_results": 25,
+            "n_results": 30,
             "include": ["metadatas", "documents", "distances"]
         }
         if where_clause:
@@ -265,7 +294,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         try:
             results_global = kb_collection.query(
                 query_embeddings=[query_embedding],
-                n_results=25,
+                n_results=30,
                 include=["metadatas", "documents", "distances"]
             )
             kb_chunks = process_results(results_global, "knowledge_base", norm_q)
@@ -285,27 +314,27 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         for chunk in kb_chunks:
             txt_lower = chunk["text"].lower()
             if "cancer" in txt_lower or "leukemia" in txt_lower or "tumor" in txt_lower:
-                chunk["similarity_score"] += 0.40
-            if "symptom" in txt_lower or "blood" in txt_lower:
                 chunk["similarity_score"] += 0.20
+            if "symptom" in txt_lower or "blood" in txt_lower:
+                chunk["similarity_score"] += 0.10
                 
     # RTI Boost
     if any(k in query_lower for k in ["rti", "right to information", "सूचना का अधिकार", "suchna ka adhikar"]):
         for chunk in kb_chunks:
             if "rti" in chunk["source"].lower() or "information" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.35
+                chunk["similarity_score"] += 0.18
                 
     # KYC Boost
     if "kyc" in query_lower:
         for chunk in kb_chunks:
             if "kyc" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.35
+                chunk["similarity_score"] += 0.18
                 
     # Consumer Protection Boost
     if any(k in query_lower for k in ["consumer", "upbhokta", "उपभोक्ता", "shikayat", "complaint"]):
         for chunk in kb_chunks:
             if "consumer" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.35
+                chunk["similarity_score"] += 0.18
 
     # Stomach pain / Abdominal pain / General symptom boost & isolation
     is_pain_or_fever = any(k in query_lower for k in ["pet", "drd", "dard", "stomach", "pain", "bukhar", "bhukar", "fever", "bcha", "bacha", "child", "vomit", "ulti", "dva", "dawai", "goli", "upchar", "symptom"])
@@ -316,9 +345,9 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
             src_lower = chunk["source"].lower()
             txt_lower = chunk["text"].lower()
             if any(k in query_lower for k in ["pet", "stomach", "abdominal"]) and any(k in src_lower or k in txt_lower for k in ["stomach", "abdominal", "pet"]):
-                chunk["similarity_score"] += 0.55
+                chunk["similarity_score"] += 0.22
             elif "symptoms" in src_lower or "pain" in src_lower:
-                chunk["similarity_score"] += 0.45
+                chunk["similarity_score"] += 0.15
         kb_chunks = [c for c in kb_chunks if "sexual_health" not in c["source"].lower()]
 
 
@@ -327,9 +356,9 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         for chunk in kb_chunks:
             src_lower = chunk["source"].lower()
             if "sexual" in src_lower or "reproductive" in src_lower or "health" in src_lower or "family" in src_lower:
-                chunk["similarity_score"] += 0.35
+                chunk["similarity_score"] += 0.15
             if "masturbation" in query_lower and "masturbation" in src_lower:
-                chunk["similarity_score"] += 0.45
+                chunk["similarity_score"] += 0.20
 
     # 4.6 Language-aware filtering for KB chunks
     if query_language:
@@ -340,7 +369,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         elif query_language == "Hinglish":
             for chunk in kb_chunks:
                 if "hinglish:" in chunk["text"].lower() or "hinglish" in chunk["text"].lower():
-                    chunk["similarity_score"] += 0.25
+                    chunk["similarity_score"] += 0.10
             lang_filtered = kb_chunks
         else:
             lang_filtered = kb_chunks
@@ -348,31 +377,41 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         if lang_filtered:
             kb_chunks = lang_filtered
 
-    # 5. Boost local knowledge_base chunks (from internal MD files) over external ICMR/NHM sources
-    # Internal KB md files should be the FIRST priority knowledge source
+    # 5. FIRST PRIORITY: Curated Local Markdown KB Files (.md)
+    # All .md files in knowledge_base (medical, legal, banking, common) have absolute priority over external PDFs.
+    md_chunks = []
+    pdf_chunks = []
+
     for chunk in kb_chunks:
         src_lower = chunk.get("source", "").lower()
-        # If source is a local .md file from our knowledge_base folders, boost it
-        if src_lower.endswith(".md") or src_lower.endswith(".txt"):
-            chunk["similarity_score"] += 0.15
-        # Slightly de-prioritize external ICMR/government download sources when local content exists
-        elif any(ext in src_lower for ext in ["icmr", "nhm", "mohfw", "who", "niti"]):
-            chunk["similarity_score"] -= 0.05
+        if src_lower.endswith(".md") or src_lower.endswith(".txt") or "kb_md_" in str(chunk.get("id", "")):
+            chunk["similarity_score"] += 0.45
+            md_chunks.append(chunk)
+        else:
+            pdf_chunks.append(chunk)
+
+    md_chunks = sorted(md_chunks, key=lambda x: x["similarity_score"], reverse=True)
+    pdf_chunks = sorted(pdf_chunks, key=lambda x: x["similarity_score"], reverse=True)
+
+    # If matching local .md chunks exist, use ONLY .md chunks and purge PDF manuals completely
+    if md_chunks and md_chunks[0]["similarity_score"] >= 0.30:
+        kb_chunks = md_chunks
+    else:
+        kb_chunks = md_chunks + pdf_chunks
 
     # 6. Merge and rank
-    # Sort each set descending by similarity score
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)
     
-    # Tiered ranking: user_docs has absolute priority
-    # If user has uploaded documents, cap knowledge base chunks to prevent drowning the user document context.
+    # Tiered ranking: user_docs has absolute priority when uploaded
     if len(user_chunks) > 0:
-        kb_chunks = kb_chunks[:3]
+        kb_chunks = []
         
     merged_chunks = user_chunks + kb_chunks
+
     
-    # Cap total context chunks to 5
-    final_chunks = merged_chunks[:5]
+    # Cap total context chunks to 8 candidates
+    final_chunks = merged_chunks[:8]
     
     # Usage metrics
     user_docs_used = sum(1 for c in final_chunks if c["collection"] == "user_docs")

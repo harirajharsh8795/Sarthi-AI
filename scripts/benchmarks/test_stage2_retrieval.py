@@ -100,6 +100,29 @@ def run_tests():
         "status": "PASS"
     })
     print("Scenario 2 passed.\n")
+
+    # ----------------------------------------------------
+    # Test Scenario 2b: Document query should stay on session docs even if conversation_id is missing/mismatched
+    # ----------------------------------------------------
+    print("--- Scenario 2b: Document query fallback to session documents ---")
+    query_2b = "mere report ko explain kro"
+    res_2b = retrieval_router.retrieve_context(query_2b, session_a, conversation_id="conv_missing")
+
+    assert res_2b["has_any_context"] is True, "Expected context for document-style query"
+    assert res_2b["user_doc_chunks_used"] > 0, "Expected user_docs chunks even when conversation_id does not match"
+    assert res_2b["knowledge_base_chunks_used"] == 0, "Expected no KB chunks for uploaded document explanation"
+    assert res_2b["context_chunks"][0]["collection"] == "user_docs", "Expected the top chunk to come from user_docs"
+
+    results_summary.append({
+        "type": "Doc Query Session Fallback",
+        "query": query_2b,
+        "expanded": res_2b["expanded_query"][:35] + "...",
+        "user_chunks": res_2b["user_doc_chunks_used"],
+        "kb_chunks": res_2b["knowledge_base_chunks_used"],
+        "top_score": res_2b["context_chunks"][0]["similarity_score"] if res_2b["context_chunks"] else 0.0,
+        "status": "PASS"
+    })
+    print("Scenario 2b passed.\n")
     
     # ----------------------------------------------------
     # Test Scenario 3: Hinglish Glossary query and hospital domain retrieval

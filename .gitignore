@@ -17,6 +17,7 @@ htmlcov/
 data/
 db.sqlite3
 *.sqlite3
+*.db
 chroma_db/
 uploads/
 backups/

@@ -55,7 +55,7 @@ class CompressionService:
                 continue
                 
             # Sort page chunks by index or similarity score
-            page_chunks.sort(key=lambda x: x.get("hybrid_score", 0.0), reverse=True)
+            page_chunks.sort(key=lambda x: x.get("hybrid_score", x.get("similarity_score", 0.0)), reverse=True)
             
             # Start merging
             merged_text = page_chunks[0]["text"]

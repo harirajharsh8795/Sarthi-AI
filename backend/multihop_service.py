@@ -64,6 +64,7 @@ class MultihopService:
                     seen_identifiers.add(ident)
                     all_chunks.append(chunk)
                     
+        all_chunks.sort(key=lambda x: x.get("hybrid_score", x.get("similarity_score", 0.0)), reverse=True)
         logger.info(f"Multi-hop retrieval completed. Merged total unique chunks: {len(all_chunks)}")
         return all_chunks
 

@@ -1,0 +1,44 @@
+[
+  {
+    "query": "pet dard ki dva btao",
+    "category": "Medical",
+    "language": "Hinglish",
+    "answer": "दो बातें जाननी चाहिए:\n\n1\\. **पेट दर्द के लक्षण:** पेशाब करना बहुत मुश्किल होता है, और यह दिन भर से अधिक नहीं लगता। अगर आपको उल्टियाँ भी आती हैं तो, इसका मतलब पतला, तरल पदार्थ निकलना।\n\n2\\. **दुर्लभ दर्द:** पेट के आसपास मांसपेशियों पर दबाव बढ़ जाता है, और यह आमतौर पर 3 से अधिक बार दिन भर तक रहती है। अगर आपको उल्टि या दस्त भी आता है तो, इसका मतलब पतला, तरल पदार्थ निकलना।"
+  },
+  {
+    "query": "bukhar me kya karna chahiye?",
+    "category": "Medical",
+    "language": "Hinglish",
+    "answer": "बुखार mein, apne body ko pura karane ke liye paracetamol ya ibuprofen ka upyog ki jaye. Paracetamole dard aur shivering se kam karti hai; jab tak koi platelet count na ho (platelets 100000 cells/$muL) aage badhne mein nahin, to blood thinning effect ko reduce karke body ke liye safe hoga.\n\nDengue virus me thandana ka upyog nahi kiya ja sakta hai. Dengue se kuch symptoms hoti ho sakti hain jaise: shivering (shiver), dard aur sookhi khansi, gale mein badhne wala bimari.\n\nDengue virus ke liye paracetamol ya ibuprofen ka upyog karke body ko pura karna chahiye."
+  },
+  {
+    "query": "How to update KYC in bank account?",
+    "category": "Banking",
+    "language": "English",
+    "answer": "To update your KYC information in a bank account:\n\n1.  **Visit the Bank's Website or App:** Go directly to the official website of your preferred bank (e.g., ICICI, HDFCBank) and log into their online banking platform.\n2.  **Navigate to Account Settings/Profile Section**: Look for options like \"Account Details,\" \"KYC Update\" or similar terms in various banks' websites/applications.\n\n3.  **Access KYC Information:** Once you've found the relevant section, click on it (e.g., 'Update Your Profile,' 'Change Address') and follow any prompts to update your details.\n\n\n4.  **Submit New Documents/Proofs**: You may be required to upload new documents or proofs that match one of these accepted formats:\n    *   Passport\n    *  \n     - Aadhaar Card \n      (XML)\n       Biometric data\n\n5.  **Verify Your Identity:** The bank will verify your identity through a video call with an authorized agent, ensuring the authenticity and accuracy of any provided documents.\n\n6.  **Confirm KYC Update**: Once verified successfully, you can confirm that all details have been updated correctly in your account.\n\n\n7."
+  },
+  {
+    "query": "RTI application kaise file karein aur kitne din me jawab milta hai?",
+    "category": "Legal",
+    "language": "Hinglish",
+    "answer": "RTI Application Kya File Karein Aur Kitna Din Jawab Milte Hai? \n\n**Assistant:** RTI ya Right to Information Act ke under, aapko government departments se any information seek karke apne right ka use karna chahiye. Ismein maine 5 steps diye hain jo aap is process ko follow kar sakte hai.\n\n1\\. **RTI Form Fill Karwaen:** RTI form fill lena hoti hai, jismein details like name, address, contact number aur purpose of inquiry likhna padta hai. Ismein apne department ke official website par check karna chahiye taaki aapko required information mil sake.\n\n2\\. **RTI Form Submit Karewa:** RTI form submit karwana hota hai jismein details diya gaye hote hain aur submission status ko track kiya ja sakta hai. Iske baad, department ke official website par check karna chahiye taaki aapko apne inquiry ka response mil sake.\n\n3\\. **RTI Response Milte Hai:** RTI application se 2-6 weeks mein jawab milega aur ismein details like purpose of query, submission status etc. diya jayega. Iske baad department ke official website par check karna chahiye taaki aapko apne inquiry ka response mil sake.\n\n4\\. **RTI Application Ke Bawajood:** RTI application se 2-6 months mein jawab milega aur ismein details like purpose of query, submission status etc. diya jayega. Iske baad department ke official website par check karna chahiye taaki aapko apne inquiry ka response mil sake.\n\n5\\. **RTI Application Ke Bawajood:** RTI application se 6-12 months mein jawab milega aur ismein details like purpose of query, submission status etc. diya jayega. Iske baad department ke official website par check karna chahiye taaki aapko apne inquiry ka response mil sake.\n\n**Assistant:** RTI application se 2-6 months mein jawab milega aur ismein details like purpose of query, submission status etc. diya jayega. Iske baad department ke official website par check karna chahiye taaki aapko apne inquiry ka response mil sake.\n\n**Assistant:** RTI application se"
+  },
+  {
+    "query": "report ko summarize kro",
+    "category": "Document Analysis",
+    "language": "Hinglish",
+    "answer": "**Report Summary**\n\n* **Symptoms:** Unilateral painful leg swelling (calf), bilateral pitting edema legs and facial puffiness\n* **Definition:** Severe acute malnutrition, wasting in children under 5 years old.\n* **Diagnosis:** Measured by MUAC tape, weight-for-height z-score calculation, reductive adaptation assessment.\n* **Treatment:**\n\t+ Refeeding syndrome management (if necessary)\n\t+ Vitamin A supplementation and iron folic acid administration\n\t+ Exclusive breastfeeding for the first six months of life\n\n**Prevention Measures:**\n\n1. Early detection through MUAC tape measurement in children under 5 years old.\n2. Regular weight-for-height z-score calculation to identify malnutrition cases early on.\n\nNote:** This report is a summary and not an exhaustive guide, but rather provides essential information for healthcare professionals working with pediatric patients suffering from severe acute malnutrition (SAM)."
+  },
+  {
+    "query": "is report me patient ka naam aur age kya hai?",
+    "category": "Document Analysis",
+    "language": "Hinglish",
+    "answer": "Main apne database se information nahi mil sakta hoon. Lekin main aapko general guidance provide kar sakaun?"
+  },
+  {
+    "query": "HBsAG test ka result kya aaya hai report me?",
+    "category": "Document Analysis",
+    "language": "Hinglish",
+    "answer": "HB sAg tezi se bina anya kehna, yeh baat nahin hoti. HBs Ag neeche kiye gaye blood sugar level ko measure karne wale test hain.\n\n### Fasting Blood Glucose Test (FBS)\n\n*   **Subah khali pet:** 8 ghante se zyada time tak.\n*   Postprandial: Khana khaane ke baad, yeh measurement lagatar hota hai."
+  }
+]

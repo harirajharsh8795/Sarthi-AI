@@ -82,7 +82,7 @@ class EdgeRuntimeOptimizer:
 
     def get_runtime_profile(self) -> dict:
         """Returns the hardware and execution settings metrics."""
-        disk = shutil.disk_usage("/")
+        disk = shutil.disk_usage(os.path.abspath("."))
         mem = psutil.virtual_memory()
         swap = psutil.swap_memory()
         

@@ -77,10 +77,18 @@ def extract_test_results_from_text(text: str) -> List[Dict[str, str]]:
     for i in range(len(lines) - 1):
         a = lines[i]
         b = lines[i + 1]
-        if any(tok in b.upper() for tok in COMMON_RESULT_TOKENS):
-            test = a.strip(' .:-\t')
-            raw_res = b.strip()
-            if test and not any(t["test_name"] == test for t in results):
-                results.append({"test_name": test, "result": _normalize_result(raw_res), "raw": raw_res})
+    # Strategy 4: Numeric test result lines (e.g. "Serum SGPT (ALT) 78.32 10-40 IU/L" or "Serum Bilirubin Total 1.9")
+    numeric_re = re.compile(r"^([A-Za-z0-9\s\(\)/-]{3,60}?)\s+([\d\.]+)\s*([A-Za-z%/µmglIU]+)?(?:\s+[\d\.-]+)?", re.IGNORECASE)
+    for ln in lines:
+        m = numeric_re.match(ln)
+        if m:
+            test = m.group(1).strip(' .:-\t')
+            val = m.group(2).strip()
+            unit = (m.group(3) or "").strip()
+            res_str = f"{val} {unit}".strip()
+            # Exclude header words or non-test strings
+            if test.lower() not in ("test", "patient name", "reg no", "sample id", "bed no", "print time", "age", "sex", "method", "unit") and len(test) >= 3:
+                if not any(t["test_name"] == test for t in results):
+                    results.append({"test_name": test, "result": res_str, "raw": ln})
 
     return results

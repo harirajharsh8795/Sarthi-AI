@@ -253,7 +253,7 @@ export default function App() {
           </div>
           <div className="space-y-1.5">
             <h1 className="text-sm font-black tracking-widest text-gradient">
-              SARTHI AI
+              SAARTHI AI
             </h1>
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider animate-pulse">
               {language === "hi" ? "आरंभ हो रहा है..." : "Initializing offline environment..."}
