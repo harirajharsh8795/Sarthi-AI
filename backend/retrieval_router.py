@@ -105,33 +105,54 @@ def process_results(query_results: dict, collection_name: str, norm_q: float) ->
             
     return chunks
 
-def is_document_about_query(query: str) -> bool:
-    """
-    Detects trigger phrases indicating the user wants to ask about or summarize their uploaded document.
-    """
+# ---------------------------------------------------------------------------
+# RETRIEVAL INTENT CLASSIFICATION FOR USER DOCUMENTS:
+# 1. Whole-Document Summary Intent: The user explicitly requests an overview/summary of the entire uploaded file.
+#    In this case, we bypass single-chunk semantic search and retrieve document chunks sequentially across the
+#    FULL length of the document (sorted by page order up to an expanded budget n=25).
+# 2. Specific Fact Retrieval Intent: The user asks a targeted question (e.g., "doctor name", "receipt number").
+#    In this case, we ALWAYS run semantic vector embedding search against user_docs so ChromaDB dynamically
+#    retrieves relevant chunks from ANY page (including pages 2, 3, 4, 5+). Only if semantic search returns
+#    zero results do we fall back to sequential first-N chunk retrieval.
+# ---------------------------------------------------------------------------
+
+TRUE_SUMMARY_TRIGGERS = [
+    "summary", "summarize", "summarise", "overview", "briefing", "brief my report",
+    "brief report", "poora document samjhao", "explain this document", "explain my report",
+    "explain report", "report explain", "full report", "entire document", "full summary",
+    "overall report", "report brief"
+]
+
+def is_whole_document_summary_query(query: str) -> bool:
+    """Detects if query explicitly requests a full overview/summary of the uploaded document."""
     if not query:
         return False
-    query_lower = query.lower()
-    trigger_phrases = [
-        "pdf", "document", "uploaded file", "is file", "jo upload",
-        "summary", "summarize", "summarise", "about this doc", "reprort",
-        "repot", "report", "mera document", "uploaded", "my file", 
-        "this doc", "this file", "in the pdf", "in the document", "file me",
-        "doc me", "pdf me"
+    q_lower = query.lower()
+    return any(phrase in q_lower for phrase in TRUE_SUMMARY_TRIGGERS)
+
+def is_document_about_query(query: str) -> bool:
+    """Detects trigger phrases indicating the user is asking about or summarizing their uploaded document."""
+    if not query:
+        return False
+    q_lower = query.lower()
+    doc_mentions = [
+        "pdf", "document", "uploaded file", "is file", "jo upload", "report",
+        "mera document", "uploaded", "my file", "this doc", "this file",
+        "in the pdf", "in the document", "file me", "doc me", "pdf me"
     ]
-    return any(phrase in query_lower for phrase in trigger_phrases)
+    return is_whole_document_summary_query(query) or any(phrase in q_lower for phrase in doc_mentions)
 
 
 def force_retrieve_user_doc_chunks(
     session_id: str,
     conversation_id: str = None,
     document_ids: list[str] = None,
-    n: int = 6,
+    n: int = 25,
 ) -> list:
     """
     Queries user_docs ChromaDB collection with where filter matching session and conversation
     and NO query embedding. Orders results by page_number and chunk_index.
-    Returns the first n chunks as context, each with similarity_score=1.0.
+    Returns up to n chunks as context in page order (default n=25 covers full multi-page documents).
     """
     collection = kb_pipeline.get_user_docs_collection()
     where_filter = {"session_id": session_id}
@@ -202,9 +223,10 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     if session_valid and conversation_id:
         active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
 
-    # If the active conversation HAS uploaded documents OR query is document-related:
-    # Force retrieval of the active conversation's documents and DO NOT pull docs from other conversations!
-    if session_valid and (active_conv_docs or is_document_about_query(query)):
+    # 1. WHOLE-DOCUMENT SUMMARY INTENT:
+    # If user explicitly requests a full document summary (e.g. "explain my report", "summary do"),
+    # force sequential retrieval across ALL pages (n=25 chunks) in page order.
+    if session_valid and (active_conv_docs or is_document_about_query(query)) and is_whole_document_summary_query(query):
         doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
         if not doc_ids_to_use:
             doc_ids_to_use = _get_latest_session_document_ids(session_id, conversation_id=conversation_id)
@@ -214,7 +236,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
                 session_id,
                 conversation_id=conversation_id,
                 document_ids=doc_ids_to_use,
-                n=8,
+                n=25,  # Full document sequential coverage
             )
             if forced_chunks:
                 return {
@@ -225,6 +247,10 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
                     "has_any_context": True,
                     "forced_user_doc_retrieval": True
                 }
+
+    # 2. SPECIFIC FACT RETRIEVAL INTENT (OR GENERAL QA):
+    # For specific questions (e.g., "doctor name", "billing amount page 4"), DO NOT force first-N chunks.
+    # Perform semantic embedding search against user_docs so ChromaDB retrieves relevant chunks from ANY page.
 
     # 1. Expand query via Stage 0 Glossary + Hinglish normalization
     expanded_query = expand_query_with_glossary(query)
@@ -254,8 +280,17 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         )
         user_chunks = process_results(results_user, "user_docs", norm_q)
         
-        if not is_document_about_query(query):
-            user_chunks = [c for c in user_chunks if c["similarity_score"] >= 0.30]
+        # If semantic search returned zero results above threshold, fall back to forced sequential retrieval
+        if not user_chunks:
+            doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
+            if doc_ids_to_use:
+                user_chunks = force_retrieve_user_doc_chunks(
+                    session_id,
+                    conversation_id=conversation_id,
+                    document_ids=doc_ids_to_use,
+                    n=8,
+                )
+
 
         
     # 4. Retrieve from knowledge_base with domain filtering
