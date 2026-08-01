@@ -51,9 +51,10 @@ def test_prompt_building():
         domain="Banking",
         intent="QA"
     )
-    assert "Reference Facts" in prompt
+    assert "Context Information" in prompt
     assert "KYC guidelines" in prompt
     assert "CORE RULES" in prompt
+
 
 
 def test_privacy_redaction():
