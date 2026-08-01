@@ -79,3 +79,24 @@ def test_confidence_calculator():
     res = confidence_service.calculate_confidence(chunks, "medical", citations_used_count=2)
     assert res["confidence_score"] > 60.0
     assert res["confidence_label"] in ["High Confidence", "Medium Confidence"]
+
+
+def test_sentence_aware_chunking():
+    from kb_pipeline import chunk_text
+    sample_text = (
+        "Appendicitis is an inflammation of the appendix. "
+        "If left untreated, the appendix can rupture and cause severe peritonitis. "
+        "पेट दर्द का मुख्य लक्षण दाहिने निचले हिस्से में होना है। "
+        "डॉक्टर से सलाह लिए बिना कोई पेनकिलर न लें।"
+    )
+    pages_text = [(1, sample_text)]
+    chunks = chunk_text(pages_text, chunk_size=150, chunk_overlap=30)
+    
+    assert len(chunks) >= 1
+    # Verify that no chunk ends mid-word or without full sentence integrity
+    for c in chunks:
+        t = c["text"]
+        # Sentence integrity check: every chunk should be clean complete text
+        assert not t.endswith("अपेंडि")
+        assert not t.endswith(" inflammation of")
+

@@ -286,44 +286,103 @@ def extract_text_and_language(pdf_path, expected_lang):
         
     return pages_text, detected_lang
 
+def _split_into_sentences(text: str) -> list:
+    """
+    Splits text into language-aware sentences preserving boundary punctuation.
+    Supports English (. ? !) and Hindi Devanagari (। \u0964, ॥ \u0965) and double newlines.
+    """
+    if not text:
+        return []
+    
+    # Normalize carriage returns
+    normalized = re.sub(r"\r\n|\r", "\n", text)
+    
+    # Sentence boundary regex matching text + sentence termination punctuation
+    # \u0964 is Devanagari Purna Viram (।), \u0965 is Double Danda (॥)
+    pattern = r'([^.!?\u0964\u0965\n]+(?:[.!?\u0964\u0965]+|\n\n|\n|$))'
+    raw_parts = re.findall(pattern, normalized)
+    
+    sentences = []
+    for part in raw_parts:
+        part_str = part.strip()
+        if part_str:
+            sentences.append(part_str)
+            
+    return sentences if sentences else [normalized.strip()]
+
+
 def chunk_text(pages_text, chunk_size=512, chunk_overlap=80):
     """
-    Splits page-by-page text into character-based sliding window chunks of size 512 with 80 character overlap.
-    Tracks page number per chunk in a Unicode-safe manner.
-    Returns a list of chunk dicts: {"text": str, "page_number": int, "chunk_index": int}
+    Splits page-by-page text into sentence-aware chunks of target size ~512 characters
+    while preserving sentence and paragraph boundaries (English and Hindi Devanagari).
+    
+    Never cuts a sentence in half. If a single sentence exceeds chunk_size, it is kept as its own chunk.
+    Sentence-level overlap retains 1-2 trailing sentences (up to chunk_overlap chars) for the next chunk.
+    
+    Returns a list of dicts: [{"text": str, "page_number": int, "chunk_index": int}]
     """
     all_chunks = []
-    
+
     for page_num, text in pages_text:
-        # Clean text basic whitespace normalization
-        # Note: Do not remove Hindi/Devanagari characters
-        normalized_text = re.sub(r"\r\n|\r|\n", "\n", text)
-        text_len = len(normalized_text)
-        
-        if text_len == 0:
+        if not text or not text.strip():
             continue
-            
-        start = 0
+
+        sentences = _split_into_sentences(text)
+        if not sentences:
+            continue
+
         chunk_idx = 0
-        
-        while start < text_len:
-            end = min(start + chunk_size, text_len)
-            chunk_content = normalized_text[start:end]
-            
-            # Save chunk
-            all_chunks.append({
-                "text": chunk_content,
-                "page_number": page_num,
-                "chunk_index": chunk_idx
-            })
-            
-            chunk_idx += 1
-            start += (chunk_size - chunk_overlap)
-            
-            # If we reached the end of page and the remaining characters are very few
-            if start >= text_len - chunk_overlap and end == text_len:
-                break
-                
+        i = 0
+
+        while i < len(sentences):
+            current_sentences = []
+            current_len = 0
+            start_i = i
+
+            while i < len(sentences):
+                sentence = sentences[i]
+                sent_len = len(sentence)
+
+                # If single sentence itself is larger than chunk_size and current_chunk is empty,
+                # make it its own chunk without force-splitting
+                if sent_len >= chunk_size and not current_sentences:
+                    current_sentences.append(sentence)
+                    i += 1
+                    break
+
+                # Check if adding this sentence exceeds chunk_size
+                added_len = sent_len + (1 if current_sentences else 0)
+                if current_len + added_len > chunk_size and current_sentences:
+                    break
+
+                current_sentences.append(sentence)
+                current_len += added_len
+                i += 1
+
+            chunk_content = " ".join(current_sentences).strip()
+            if chunk_content:
+                all_chunks.append({
+                    "text": chunk_content,
+                    "page_number": page_num,
+                    "chunk_index": chunk_idx
+                })
+                chunk_idx += 1
+
+            # Determine sentence overlap for next chunk:
+            # Walk backward from i to find trailing sentences up to ~chunk_overlap characters
+            if i < len(sentences):
+                overlap_len = 0
+                overlap_count = 0
+                for j in range(i - 1, start_i, -1):
+                    s_len = len(sentences[j])
+                    if overlap_len + s_len <= chunk_overlap or overlap_count == 0:
+                        overlap_len += s_len
+                        overlap_count += 1
+                    else:
+                        break
+                # Set next chunk starting sentence index
+                i = max(i - overlap_count, start_i + 1)
+
     return all_chunks
 
 def index_document(domain, language, filename, source_url, discovered_via, file_path):
