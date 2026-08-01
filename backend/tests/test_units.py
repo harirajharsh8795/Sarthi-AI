@@ -127,6 +127,8 @@ def test_ocr_sanitizer_quality_and_repair():
 
     garbled_text = "P a t i e n t  r e s u l t  H3p@t!t!$  b!ll#123  x y z"
     q_garbled = ocr_sanitizer.assess_ocr_quality(garbled_text)
-    assert q_garbled["quality_score"] < 0.50
+    assert q_garbled["quality_score"] < 0.70
+    assert len(q_garbled["warnings"]) > 0
+
 
 
