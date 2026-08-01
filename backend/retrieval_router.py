@@ -291,24 +291,16 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
                     n=8,
                 )
 
-
-        
-    # 4. Retrieve from knowledge_base with domain filtering
-    query_lower = query.lower()
-    med_terms = ["cancer", "blood", "leukemia", "prostate", "tumor", "fever", "bukhar", "pain", "dard", "drd", "bimari", "doctor", "hospital", "dawa", "dawai", "dvai", "dva", "medicine", "symptoms", "laksan", "lakshan", "ilaj", "treatment", "report", "vomit", "cough", "khansi"]
-    bank_terms = ["bank", "kyc", "account", "loan", "interest", "rbi", "card", "khata", "paisa", "atm", "transaction", "foreclosure"]
-    leg_terms = ["court", "ipc", "crpc", "bnss", "fir", "police", "rti", "complaint", "vakeel", "dhara", "kanoon", "law", "rights", "constitution"]
-
-    is_med_query = (query_domain == "Medical") or any(k in query_lower for k in med_terms)
-    is_bank_query = (query_domain == "Banking") or any(k in query_lower for k in bank_terms)
-    is_leg_query = (query_domain == "Legal") or any(k in query_lower for k in leg_terms)
+    # 4. Consolidated Domain Classification & ChromaDB Retrieval
+    domain_label, domain_conf = classify_domain(query)
+    effective_domain = query_domain if query_domain in ["Medical", "Banking", "Legal"] else domain_label
 
     where_clause = None
-    if is_med_query and not (is_bank_query or is_leg_query):
+    if effective_domain == "Medical":
         where_clause = {"domain": {"$in": ["hospital", "medical", "common"]}}
-    elif is_bank_query and not (is_med_query or is_leg_query):
+    elif effective_domain == "Banking":
         where_clause = {"domain": "banking"}
-    elif is_leg_query and not (is_med_query or is_bank_query):
+    elif effective_domain == "Legal":
         where_clause = {"domain": {"$in": ["legal", "constitution_and_general_law"]}}
 
     kb_chunks = []
@@ -336,91 +328,32 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         except Exception:
             kb_chunks = []
 
-    # Strict domain isolation: purge cross-domain chunks
-    if is_med_query and not (is_bank_query or is_leg_query):
+    # Strict domain isolation: purge cross-domain chunks based on effective domain
+    if effective_domain == "Medical":
         kb_chunks = [c for c in kb_chunks if "constitution" not in c.get("source", "").lower() and "banking" not in c.get("source", "").lower() and c.get("domain") not in ("banking", "legal", "constitution_and_general_law")]
-    elif is_bank_query and not (is_med_query or is_leg_query):
+    elif effective_domain == "Banking":
         kb_chunks = [c for c in kb_chunks if "medical" not in c.get("source", "").lower() and "hospital" not in c.get("source", "").lower() and c.get("domain") not in ("medical", "hospital", "legal")]
-    elif is_leg_query and not (is_med_query or is_bank_query):
+    elif effective_domain == "Legal":
         kb_chunks = [c for c in kb_chunks if "banking" not in c.get("source", "").lower() and "medical" not in c.get("source", "").lower() and c.get("domain") not in ("medical", "hospital", "banking")]
 
-    # Cancer & Blood Cancer specific boost
-    if "cancer" in query_lower or "leukemia" in query_lower:
-        for chunk in kb_chunks:
-            txt_lower = chunk["text"].lower()
-            if "cancer" in txt_lower or "leukemia" in txt_lower or "tumor" in txt_lower:
-                chunk["similarity_score"] += 0.20
-            if "symptom" in txt_lower or "blood" in txt_lower:
-                chunk["similarity_score"] += 0.10
-                
-    # RTI Boost
-    if any(k in query_lower for k in ["rti", "right to information", "सूचना का अधिकार", "suchna ka adhikar"]):
-        for chunk in kb_chunks:
-            if "rti" in chunk["source"].lower() or "information" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.18
-                
-    # KYC Boost
-    if "kyc" in query_lower:
-        for chunk in kb_chunks:
-            if "kyc" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.18
-                
-    # Consumer Protection Boost
-    if any(k in query_lower for k in ["consumer", "upbhokta", "उपभोक्ता", "shikayat", "complaint"]):
-        for chunk in kb_chunks:
-            if "consumer" in chunk["source"].lower():
-                chunk["similarity_score"] += 0.18
-
-    # Stomach pain / Abdominal pain / General symptom boost & isolation
-    is_pain_or_fever = any(k in query_lower for k in ["pet", "drd", "dard", "stomach", "pain", "bukhar", "bhukar", "fever", "bcha", "bacha", "child", "vomit", "ulti", "dva", "dawai", "goli", "upchar", "symptom"])
-    is_sexual_query = any(k in query_lower for k in ["sex", "condom", "youn", "timing", "bdhaye", "pehna", "libido", "erectile", "masturbation"])
-
-    if is_pain_or_fever and not is_sexual_query:
-        for chunk in kb_chunks:
-            src_lower = chunk["source"].lower()
-            txt_lower = chunk["text"].lower()
-            if any(k in query_lower for k in ["pet", "stomach", "abdominal"]) and any(k in src_lower or k in txt_lower for k in ["stomach", "abdominal", "pet"]):
-                chunk["similarity_score"] += 0.22
-            elif "symptoms" in src_lower or "pain" in src_lower:
-                chunk["similarity_score"] += 0.15
-        kb_chunks = [c for c in kb_chunks if "sexual_health" not in c["source"].lower()]
-
-
-    # Sexual Health Boost
-    if is_sexual_query:
-        for chunk in kb_chunks:
-            src_lower = chunk["source"].lower()
-            if "sexual" in src_lower or "reproductive" in src_lower or "health" in src_lower or "family" in src_lower:
-                chunk["similarity_score"] += 0.15
-            if "masturbation" in query_lower and "masturbation" in src_lower:
-                chunk["similarity_score"] += 0.20
-
-    # 4.6 Language-aware filtering for KB chunks
+    # Language-aware filtering for KB chunks
     if query_language:
         if query_language == "English":
             lang_filtered = [c for c in kb_chunks if "_hi" not in c["source"].lower().split(".")[0][-3:]]
+            if lang_filtered:
+                kb_chunks = lang_filtered
         elif query_language == "Hindi":
             lang_filtered = [c for c in kb_chunks if "_en" not in c["source"].lower().split(".")[0][-3:]]
-        elif query_language == "Hinglish":
-            for chunk in kb_chunks:
-                if "hinglish:" in chunk["text"].lower() or "hinglish" in chunk["text"].lower():
-                    chunk["similarity_score"] += 0.10
-            lang_filtered = kb_chunks
-        else:
-            lang_filtered = kb_chunks
-        
-        if lang_filtered:
-            kb_chunks = lang_filtered
+            if lang_filtered:
+                kb_chunks = lang_filtered
 
-    # 5. FIRST PRIORITY: Curated Local Markdown KB Files (.md)
-    # All .md files in knowledge_base (medical, legal, banking, common) have absolute priority over external PDFs.
+    # Prioritize Curated Local Markdown KB Files (.md) without modifying raw similarity scores
     md_chunks = []
     pdf_chunks = []
 
     for chunk in kb_chunks:
         src_lower = chunk.get("source", "").lower()
         if src_lower.endswith(".md") or src_lower.endswith(".txt") or "kb_md_" in str(chunk.get("id", "")):
-            chunk["similarity_score"] += 0.45
             md_chunks.append(chunk)
         else:
             pdf_chunks.append(chunk)
@@ -428,31 +361,27 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     md_chunks = sorted(md_chunks, key=lambda x: x["similarity_score"], reverse=True)
     pdf_chunks = sorted(pdf_chunks, key=lambda x: x["similarity_score"], reverse=True)
 
-    # If matching local .md chunks exist, use ONLY .md chunks and purge PDF manuals completely
-    if md_chunks and md_chunks[0]["similarity_score"] >= 0.30:
+    # Use a defined threshold for local file priority
+    MIN_SIMILARITY_SCORE = 0.30
+    if md_chunks and md_chunks[0]["similarity_score"] >= MIN_SIMILARITY_SCORE:
         kb_chunks = md_chunks
     else:
         kb_chunks = md_chunks + pdf_chunks
 
-    # 6. Merge and rank
+    # Merge, rank, and strictly clamp similarity scores within [0.0, 1.0]
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)
     
-    # Tiered ranking: user_docs has absolute priority when uploaded
     if len(user_chunks) > 0:
         kb_chunks = []
         
     merged_chunks = user_chunks + kb_chunks
 
+    # Enforce strict score bounding [0.0, 1.0]
+    for c in merged_chunks:
+        c["similarity_score"] = min(max(float(c.get("similarity_score", 0.0)), 0.0), 1.0)
     
-    # Cap total context chunks to 8 candidates
     final_chunks = merged_chunks[:8]
-    
-    # Usage metrics
-    user_docs_used = sum(1 for c in final_chunks if c["collection"] == "user_docs")
-    kb_used = sum(1 for c in final_chunks if c["collection"] == "knowledge_base")
-    
-    has_any_context = len(final_chunks) > 0
     
     return {
         "expanded_query": expanded_query,
