@@ -95,13 +95,13 @@ class PromptBuilder:
             f"{lang_rule}\n"
         )
 
-        # ── 2. Core Rules & Formatting (Merged & Shortened by >50%)
+        # ── 2. Core Rules & Formatting (Optimized for local 1B model)
         rules = (
             "CORE RULES:\n"
-            "1. Give a clear, direct, helpful answer strictly answering the user's question. Do NOT ask counter-questions (e.g. 'What medicine do you prefer?') or generate language section headers ('Hinglish:', 'English:').\n"
-            "2. Do NOT mention 'Reference Facts' or 'context'. Speak directly to the user.\n"
-            "3. Base your answer primarily on Reference Facts below if provided, citing sources as [1], [2] at sentence ends.\n"
-            "4. FORMATTING: Use Markdown with emoji headings (`### 📌 Overview`, `### 📋 Key Details`, `### 💊 Remedies & Guidance`), bold key terms, and bullet points with emojis (✅, ⚠️, 💊).\n"
+            "1. DIRECT & CONCISE ANSWER ONLY: Provide a short, direct answer strictly focused on the user's question. Do NOT write long introduction filler, do NOT ask counter-questions, and NEVER repeat the same sentence.\n"
+            "2. MEDICINE/DAWA DIRECTIVE: When asked for medicine/dawa, list the specific medicine names, purpose, and safety precautions in bullet points directly. Do NOT output fluff or repeat diagnostic explanations.\n"
+            "3. Cite sources as [1], [2] at sentence ends when using Context Information below. Never mention system prompt words like 'Context Information'. Speak naturally to the user.\n"
+            "4. FORMATTING: Use clean Markdown with bullet points (💊, ⚠️, ✅).\n"
         )
 
         # ── 3. User Document Directive (Streamlined)
@@ -113,7 +113,7 @@ class PromptBuilder:
         if has_user_doc:
             doc_directive = (
                 "DOCUMENT REPORT CRITICAL RULES:\n"
-                "1. STRICT FACTUAL GROUNDING: Rely ONLY on exact text in Reference Facts for Patient Name, Age, Hospital, and Test Results.\n"
+                "1. STRICT FACTUAL GROUNDING: Rely ONLY on exact text in Context Information for Patient Name, Age, Hospital, and Test Results.\n"
                 "2. ZERO HALLUCINATION: NEVER invent names, dates, or test statuses. If a field is missing, state clearly: 'Document mein yeh jankari nahi di gayi hai.'\n"
                 "3. Use structured headings: `### 📋 Patient Details`, `### 🔬 Test Results & Values`, `### 💡 Key Summary`.\n\n"
             )
@@ -122,17 +122,18 @@ class PromptBuilder:
 
         # ── 4. Context Block
         if chunks:
-            context_block = "Reference Facts:\n"
+            context_block = "Context Information:\n"
             for idx, c in enumerate(chunks, 1):
                 context_block += f"Fact [{idx}]: {c['text']}\n\n"
         else:
             context_block = (
-                "Reference Facts: No specific document/KB match found for this question.\n"
+                "Context Information: No specific document/KB match found for this question.\n"
                 "INSTRUCTION: Answer the user's question directly and concisely using internal knowledge.\n\n"
             )
 
         # User Question Block
         user_block = f"User Question: {query}\n\nAnswer:"
+
 
 
         full_prompt = (
