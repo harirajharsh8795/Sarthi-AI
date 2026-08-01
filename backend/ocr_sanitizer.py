@@ -47,22 +47,32 @@ class OCRSanitizer:
         if not text:
             return ""
 
-        tokens = text.split()
-        repaired_tokens = []
-        i = 0
-        while i < len(tokens):
-            # Look ahead for consecutive single-character alpha tokens (e.g. ['S', 'A', 'N', 'T', 'O', 'S', 'H'])
-            if len(tokens[i]) == 1 and tokens[i].isalpha() and i + 1 < len(tokens) and len(tokens[i+1]) == 1 and tokens[i+1].isalpha():
-                group = []
-                while i < len(tokens) and len(tokens[i]) == 1 and tokens[i].isalpha():
-                    group.append(tokens[i])
+        def _collapse_single_char_tokens(segment: str) -> str:
+            tokens = segment.split()
+            repaired_tokens = []
+            i = 0
+            while i < len(tokens):
+                if len(tokens[i]) == 1 and tokens[i].isalpha() and i + 1 < len(tokens) and len(tokens[i+1]) == 1 and tokens[i+1].isalpha():
+                    group = []
+                    while i < len(tokens) and len(tokens[i]) == 1 and tokens[i].isalpha():
+                        group.append(tokens[i])
+                        i += 1
+                    repaired_tokens.append("".join(group))
+                else:
+                    repaired_tokens.append(tokens[i])
                     i += 1
-                repaired_tokens.append("".join(group))
-            else:
-                repaired_tokens.append(tokens[i])
-                i += 1
+            return " ".join(repaired_tokens)
 
-        repaired = " ".join(repaired_tokens)
+        # Split text by multi-spaces (2+ spaces) to preserve distinct word boundaries
+        parts = re.split(r'(\s{2,})', text)
+        repaired_parts = []
+        for p in parts:
+            if re.match(r'^\s{2,}$', p):
+                repaired_parts.append(" ")
+            else:
+                repaired_parts.append(_collapse_single_char_tokens(p))
+
+        repaired = "".join(repaired_parts)
 
         # Repair 2: Merged lowercase-Capital words (e.g. "nonReactive" -> "non Reactive", "hepatitisC" -> "hepatitis C")
         def _fix_camelcase_merge(match):
@@ -75,6 +85,7 @@ class OCRSanitizer:
         repaired = re.sub(r'([a-z]{2,})([A-Z][a-z]+)', _fix_camelcase_merge, repaired)
 
         return repaired
+
 
 
 
