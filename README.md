@@ -199,6 +199,58 @@ npm install
 npm run build
 npm run dev
 ```
+---
+
+## 🧪 Before Committing Changes — Regression Testing
+
+Every code change **must** pass the RAG regression suite before being pushed. This catches cross-domain contamination, retrieval priority bugs, and document query regressions automatically.
+
+### Quick Regression Run (no Ollama required)
+
+```bash
+# Run the full 55-case regression suite (retrieval-only, ~30 seconds)
+pytest backend/tests/test_regression_qa.py -v
+
+# Run only medical domain tests
+pytest backend/tests/test_regression_qa.py -v -k "medical"
+
+# Run only cross-domain contamination checks
+pytest backend/tests/test_regression_qa.py -v -k "contamination"
+
+# Run only PDF-upload document query tests
+pytest backend/tests/test_regression_qa.py -v -k "TestPdfUploadQueries"
+
+# Run only .md file priority tests (guards against ICMR PDF leakage)
+pytest backend/tests/test_regression_qa.py -v -k "TestMdFilePriority"
+```
+
+### What the Regression Suite Tests
+
+| Test Class | Cases | What It Catches |
+|---|---|---|
+| `TestIntentClassification` | 48 | Wrong domain classification (medical/legal/banking) |
+| `TestRetrievalCorrectness` | 48 | Missing required keywords in retrieved chunks |
+| `TestMdFilePriority` | 9 | External PDF files (ICMR, NHM) cited instead of local .md files |
+| `TestCrossDomainContamination` | 48 | Banking keywords appearing in medical answers, etc. |
+| `TestHinglishNormalization` | 7 | Hinglish → English term expansion failures |
+| `TestDocumentTriggerDetection` | 13 | Document summary triggers not firing correctly |
+| `TestPdfUploadQueries` | 10 | Missing last-page content, cross-conversation doc leaks |
+| `TestPromptBuilderSanity` | 2 | Zero-hallucination rules missing from user-doc prompts |
+
+### CI Workflow
+
+```bash
+# 1. Run BEFORE making changes (baseline)
+pytest backend/tests/test_regression_qa.py -v > baseline.txt
+
+# 2. Make your code changes
+
+# 3. Run AFTER changes (regression check)
+pytest backend/tests/test_regression_qa.py -v
+
+# 4. If all pass, commit and push
+git add -A && git commit -m "your message" && git push
+```
 
 ---
 

@@ -60,32 +60,44 @@ class IntentService:
         if text_lower.strip() in greetings:
             return "General", "Greeting", 1.0
 
-        # Medical triggers (includes common Hinglish misspellings & synonyms)
+        # Medical triggers (includes common Hinglish misspellings & Hindi Devanagari terms)
         medical_keywords = {
-            "fever", "bukhar", "bhukhar", "bhukar", "bukhr", "bukhaar",
-            "pain", "dard", "drd",
-            "doctor", "hospital", "illness", "bimari", "bimaari", "beemar", "bimar", "rog", "rogi", "mariz", "mareez",
-            "dawa", "dawai", "dava", "dva", "dvai", "dvaii", "dawaii", "medicine", "goli", "tablet", "syrup", "injection", "aushadh",
-            "symptoms", "symptom", "lakshan", "laksan", "treatment", "ilaj", "ilaaj", "upchar", "chikitsa",
-            "canc", "cancer", "prostate", "leukemia", "tumor", "chemo", "radiotherapy", "oncology",
-            "tb", "cough", "khansi", "khaansi", "sehat", "health", "patient",
-            "dengue", "malaria", "typhoid", "sugar", "diabetes", "bp", "blood",
-            "report", "prescription", "diagnosis", "infection", "sujan", "swelling"
+            "fever", "bukhar", "bhukhar", "bhukar", "bukhr", "bukhaar", "बुखार",
+            "pain", "dard", "drd", "दर्द",
+            "doctor", "hospital", "illness", "bimari", "bimaari", "beemar", "bimar", "rog", "rogi", "mariz", "mareez", "डॉक्टर", "अस्पताल", "बीमारी", "मरीज",
+            "dawa", "dawai", "dava", "dva", "dvai", "dvaii", "dawaii", "medicine", "goli", "tablet", "syrup", "injection", "aushadh", "दवा", "दवाई", "औषध",
+            "symptoms", "symptom", "lakshan", "laksan", "treatment", "ilaj", "ilaaj", "upchar", "chikitsa", "लक्षण", "इलाज", "उपचार", "चिकित्सा",
+            "canc", "cancer", "prostate", "leukemia", "tumor", "chemo", "radiotherapy", "oncology", "कैंसर",
+            "tb", "cough", "khansi", "khaansi", "sehat", "health", "patient", "खांसी", "सेहत", "स्वास्थ्य",
+            "dengue", "malaria", "typhoid", "sugar", "diabetes", "bp", "blood", "खून",
+            "report", "prescription", "diagnosis", "infection", "sujan", "swelling", "सूजन",
+            "kidney", "liver", "heart", "stone", "attack", "cardiac", "गुर्दा", "जिगर", "दिल",
+            "headache", "migraine", "vomit", "vomiting", "ulti", "सिरदर्द", "उल्टी",
+            "constipation", "diarrhea", "diarrhoea", "weakness", "kamzori", "दस्त", "कमजोरी",
+            "dizziness", "chakkar", "breathing", "saans", "weight", "चक्कर", "सांस", "पेट", "जांच",
         }
         
-        # Legal triggers
+        # Legal triggers (includes Hindi Devanagari terms)
         legal_keywords = {
             "law", "court", "ipc", "crpc", "bnss", "fir", "police", "rti", "complaint", 
-            "consumer", "advocate", "vakeel", "dhara", "kanoon", "rights"
+            "consumer", "advocate", "vakeel", "dhara", "kanoon", "rights",
+            "bail", "arrest", "property", "traffic", "challan", "divorce",
+            "notice", "anticipatory", "section", "constitution", "act",
+            "shikayat", "adhikar", "niyam",
+            "कानून", "अदालत", "पुलिस", "एफआईआर", "जमानत", "गिरफ्तारी", "अधिकार", "शिकायत", "धारा", "वकील",
         }
         
-        # Banking triggers
+        # Banking triggers (includes Hindi Devanagari terms)
         banking_keywords = {
             "bank", "kyc", "account", "rbi", "loan", "interest", "credit", "card", 
-            "savings", "khata", "paisa", "atm", "transaction"
+            "savings", "khata", "paisa", "atm", "transaction",
+            "emi", "cibil", "foreclosure", "prepayment", "mudra",
+            "education", "gold", "balance", "nri", "personal", "home",
+            "बैंक", "खाता", "लोन", "ब्याज", "पैसे", "एटीएम", "बचत", "ऋण",
         }
 
-        words = set(re.findall(r'\b\w+\b', text_lower))
+        words = set(re.findall(r'\b[\w\u0900-\u097f]+\b', text_lower))
+
         
         has_med = bool(words.intersection(medical_keywords))
         has_leg = bool(words.intersection(legal_keywords))
@@ -122,9 +134,9 @@ class IntentService:
         text_lower = text.lower()
         
         # Scoring domains
-        med_score = sum(1 for k in ["medical", "health", "hospital", "doctor", "medicine", "dawa", "bukhar", "pain", "treatment", "symptom", "hernia", "diseas", "tb", "fever"] if k in text_lower)
-        leg_score = sum(1 for k in ["legal", "law", "court", "fir", "police", "rti", "rights", "kanoon", "dhara", "ipc", "crpc", "bnss", "constitution", "rule", "act"] if k in text_lower)
-        bank_score = sum(1 for k in ["banking", "bank", "kyc", "account", "loan", "interest", "savings", "paisa", "card", "rbi", "prepayment", "foreclosure"] if k in text_lower)
+        med_score = sum(1 for k in ["medical", "health", "hospital", "doctor", "medicine", "dawa", "bukhar", "pain", "treatment", "symptom", "hernia", "diseas", "tb", "fever", "kidney", "liver", "heart", "cancer", "headache", "vomit", "cough", "diarrhea", "weakness", "dizziness", "breathing"] if k in text_lower)
+        leg_score = sum(1 for k in ["legal", "law", "court", "fir", "police", "rti", "rights", "kanoon", "dhara", "ipc", "crpc", "bnss", "constitution", "rule", "act", "bail", "arrest", "property", "traffic", "challan", "divorce", "notice", "anticipatory", "section"] if k in text_lower)
+        bank_score = sum(1 for k in ["banking", "bank", "kyc", "account", "loan", "interest", "savings", "paisa", "card", "rbi", "prepayment", "foreclosure", "emi", "cibil", "mudra", "education", "gold", "balance", "nri"] if k in text_lower)
         
         domain = "General"
         if med_score > 0 and med_score >= leg_score and med_score >= bank_score:
