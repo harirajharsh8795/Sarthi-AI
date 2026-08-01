@@ -269,7 +269,8 @@ def _generate_answer_stream_inner(
         validated_text = validation_res["validated_text"]
         
         from output_validator import output_validator
-        validated_text = output_validator.validate_and_refine_output(validated_text, context_chunks)
+        validated_text = output_validator.validate_and_refine_output(validated_text, context_chunks, language=lang)
+
         
         grounding_score = validation_res["grounding_score"]
     except Exception as e:

@@ -124,12 +124,19 @@ class PromptBuilder:
         if chunks:
             context_block = "Context Information:\n"
             for idx, c in enumerate(chunks, 1):
-                context_block += f"Fact [{idx}]: {c['text']}\n\n"
+                chunk_text = c.get('text', '')
+                if language in ["Hinglish", "English"]:
+                    # Strip Devanagari script lines so model is not primed with Hindi Devanagari text
+                    lines = chunk_text.split('\n')
+                    filtered_lines = [l for l in lines if not re.search(r'[\u0900-\u097f]', l)]
+                    chunk_text = '\n'.join(filtered_lines)
+                context_block += f"Fact [{idx}]: {chunk_text.strip()}\n\n"
         else:
             context_block = (
                 "Context Information: No specific document/KB match found for this question.\n"
                 "INSTRUCTION: Answer the user's question directly and concisely using internal knowledge.\n\n"
             )
+
 
         # User Question Block
         user_block = f"User Question: {query}\n\nAnswer:"

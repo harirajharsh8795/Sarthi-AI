@@ -10,18 +10,23 @@ class OutputValidator:
     Verifies citations compliance, checks markdown brackets, and fixes formatting.
     """
     
-    def validate_and_refine_output(self, raw_answer: str, chunks: list) -> str:
+    def validate_and_refine_output(self, raw_answer: str, chunks: list, language: str = None) -> str:
         """
         Validates the generated output.
         Applies markdown polishing and guarantees no broken bracket syntax.
+        Strips accidental Devanagari script if response language is Hinglish.
         """
         if not raw_answer:
             return "I could not compile a grounded answer based on the retrieved sources."
 
-        # 1. Spacing normalizations - disabled to preserve exact markdown from stream
         refined = raw_answer
+
+        # If Hinglish is requested, purge any accidental Devanagari script fragments
+        if language == "Hinglish":
+            refined = re.sub(r'[\u0900-\u097f]+', '', refined)
+            refined = re.sub(r'[ \t]+', ' ', refined)
         
-        # 2. Check for citation spoofing (LLM citing numbers that don't exist in chunks)
+        # Check for citation spoofing (LLM citing numbers that don't exist in chunks)
         citations = [int(n) for n in re.findall(r'\[(\d+)\]', refined)]
         max_valid_idx = len(chunks)
         
@@ -35,7 +40,7 @@ class OutputValidator:
         if spoofed:
             logger.warning("Removed spoofed or out-of-range inline citation indexes.")
 
-        # 3. Balance checklist checks (e.g. check open bold tags)
+        # Balance checklist checks (e.g. check open bold tags)
         if refined.count("**") % 2 != 0:
             # Append closing tag to avoid UI layouts breaking
             refined += "**"
@@ -43,3 +48,4 @@ class OutputValidator:
         return refined
 
 output_validator = OutputValidator()
+
