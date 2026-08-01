@@ -25,14 +25,15 @@ class OCRSanitizer:
         # 3. Strip control characters (ascii 0-31 except newlines and tabs)
         sanitized = "".join(ch for ch in normalized if ord(ch) >= 32 or ch in ['\n', '\t'])
         
-        # 4. Remove excessive whitespaces/newlines
-        sanitized = re.sub(r'[ \t]+', ' ', sanitized)
-        sanitized = re.sub(r'\n{3,}', '\n\n', sanitized)
-
-        # 5. Perform conservative post-OCR text repair
+        # 4. Perform conservative post-OCR text repair BEFORE collapsing whitespace
         repaired = self.repair_ocr_text(sanitized.strip())
 
-        return repaired
+        # 5. Remove excessive whitespaces/newlines
+        repaired = re.sub(r'[ \t]+', ' ', repaired)
+        repaired = re.sub(r'\n{3,}', '\n\n', repaired)
+
+        return repaired.strip()
+
 
     def repair_ocr_text(self, text: str) -> str:
         """
