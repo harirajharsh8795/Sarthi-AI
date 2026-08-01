@@ -1,9 +1,9 @@
+import re
 import logging
 
 logger = logging.getLogger("saarthi.prompt")
 
 # Internal-only Hinglish decode map — used to translate query before answering.
-# The LLM should NEVER output these Hindi romanized words back to the user.
 _HINGLISH_DECODE = {
     "pet dard": "stomach pain",
     "pet drd": "stomach pain",
@@ -44,6 +44,19 @@ def _decode_hinglish_query(query: str) -> str:
     return q
 
 
+def estimate_token_count(text: str) -> int:
+    """
+    Estimates token count for mixed Devanagari/English text.
+    Devanagari characters (UTF-8 range \\u0900-\\u097f) tokenize at ~1.25 tokens/char in BPE tokenizers.
+    English/ASCII text tokenizes at ~0.3 tokens/char (len / 3.2).
+    """
+    if not text:
+        return 0
+    devanagari_count = len(re.findall(r'[\u0900-\u097f]', text))
+    ascii_len = len(text) - devanagari_count
+    return int(devanagari_count * 1.25 + ascii_len / 3.2)
+
+
 class PromptBuilder:
     """
     Constructs highly optimized, domain-specific, and language-tailored RAG prompts
@@ -61,49 +74,37 @@ class PromptBuilder:
         graph_triples: list = None
     ) -> str:
         """
-        Builds system instructions, context chunks, and formatting rules.
+        Builds streamlined system instructions, context chunks, and formatting rules.
         """
-
-        # ── Silently decode Hinglish query into English so the LLM understands intent
         decoded_query = _decode_hinglish_query(query) if language == "Hinglish" else query
 
-        # ── 1. Language instruction
+        # ── 1. Streamlined Language Instruction
         if language == "Hindi":
-            lang_instruction = (
-                "CRITICAL LANGUAGE RULE: Respond ONLY in Hindi using Devanagari script (हिंदी). "
-                "Do NOT use English or Hinglish."
-            )
+            lang_rule = "Respond ONLY in Hindi Devanagari script (हिंदी). Do NOT use English or Hinglish."
         elif language == "Hinglish":
-            lang_instruction = (
-                "CRITICAL LANGUAGE RULE: Write your answer ONLY in natural, friendly Hinglish "
-                "(conversational Hindi sentences written using the English/Latin alphabet). "
-                "Write like a helpful, caring friend explaining things simply and clearly. "
-                "IMPORTANT DIRECTIVE: Answer ONLY the user's specific question based on the Reference Facts provided. "
-                "NEVER mention or invent unrelated medical topics, symptoms, or diseases that are NOT present in the Reference Facts or user question. "
+            lang_rule = (
+                "Write ONLY in natural, friendly Hinglish (conversational Hindi in Latin script). "
+                "Answer ONLY the specific question asked. NEVER invent or mention unrelated medical topics or symptoms. "
                 "Do NOT use Devanagari script and do NOT respond in plain English."
             )
         else:
-            lang_instruction = "CRITICAL LANGUAGE RULE: Respond ONLY in clear, professional English."
+            lang_rule = "Respond ONLY in clear, professional English."
 
         system_role = (
-            "You are Saarthi AI, a helpful, caring, and accurate medical, legal, and banking assistant. "
-            "You answer in a natural, human-friendly way — like a knowledgeable friend, not a robot.\n"
-            f"{lang_instruction}\n"
+            f"You are Saarthi AI, a helpful medical, legal, and banking assistant. "
+            f"{lang_rule}\n"
         )
 
-        # ── 2. Core answer rules
+        # ── 2. Core Rules & Formatting (Merged & Shortened by >50%)
         rules = (
             "CORE RULES:\n"
-            "1. Give a clear, concise, natural, and human-friendly answer. Do NOT be robotic or repetitive.\n"
-            "2. Answer STRICTLY about the topic asked in the user's query or reference facts. NEVER introduce unrelated diseases, organs, or symptoms.\n"
-            "3. Do NOT mention 'Source Excerpts', 'Reference Facts', 'provided documents' or 'context'. Speak directly and naturally.\n"
-            "4. Never refuse valid medical, legal, or banking questions.\n"
-            "5. ACCURACY & FALLBACK: If Reference Facts are provided below, base your answer primarily on them and cite sources as [1], [2].\n"
-            "6. CITATION FORMAT: Use citation brackets like [1], [2] at the end of sentences that use facts from Reference Facts.\n"
+            "1. Give a clear, concise, natural answer strictly about the user's question. Do NOT be robotic or hallucinate unrelated diseases/topics.\n"
+            "2. Do NOT mention 'Reference Facts' or 'context'. Speak directly to the user.\n"
+            "3. Base your answer primarily on Reference Facts below if provided, citing sources as [1], [2] at sentence ends.\n"
+            "4. FORMATTING: Use Markdown with emoji headings (`### 📌 Overview`, `### 📋 Key Details`), bold key terms, and bullet points with emojis (✅, ⚠️, 💊).\n"
         )
 
-
-        # ── 3. User document directive
+        # ── 3. User Document Directive (Streamlined)
         has_user_doc = any(
             (c.get("collection") == "user_docs") or (c.get("domain") == "user_upload")
             for c in chunks
@@ -111,43 +112,29 @@ class PromptBuilder:
 
         if has_user_doc:
             doc_directive = (
-                "DOCUMENT REPORT EXTREMELY CRITICAL RULE:\n"
-                "The text in Reference Facts below contains the EXACT OCR text of the user's uploaded document/image.\n"
-                "1. STRICT FACTUAL GROUNDING: You MUST rely ONLY on the exact text provided in Reference Facts for Patient Name, Age, Gender, Hospital, and Test Results.\n"
-                "2. ABSOLUTE ZERO-HALLUCINATION DIRECTIVE: DO NOT invent, assume, or fabricate ANY patient name (e.g. NEVER output fake names like 'Kunal Kumar'), fake dates, or fake disease statuses.\n"
-                "3. Read the text line by line. Extract Patient Name (e.g. Mrs. SANTOSH DEVI), Age/Gender, Hospital Name, and Test Results (e.g. NON REACTIVE / POSITIVE) directly from Reference Facts.\n"
-                "4. If a specific field (like Patient Name or DOB) is NOT explicitly present in Reference Facts, state clearly: 'Document mein yeh jankari nahi di gayi hai.'\n"
-                "5. Always use structured markdown with emoji headings: `### 📋 Patient Details`, `### 🔬 Test Results & Values`, `### 💡 Key Summary`.\n\n"
+                "DOCUMENT REPORT CRITICAL RULES:\n"
+                "1. STRICT FACTUAL GROUNDING: Rely ONLY on exact text in Reference Facts for Patient Name, Age, Hospital, and Test Results.\n"
+                "2. ZERO HALLUCINATION: NEVER invent names, dates, or test statuses. If a field is missing, state clearly: 'Document mein yeh jankari nahi di gayi hai.'\n"
+                "3. Use structured headings: `### 📋 Patient Details`, `### 🔬 Test Results & Values`, `### 💡 Key Summary`.\n\n"
             )
         else:
             doc_directive = ""
 
-
-        # ── 4. Formatting rules
-        formatting = (
-            "MANDATORY FORMATTING RULES:\n"
-            "- Always use neat Markdown with emoji headings (`### 📌 Overview`, `### 📋 Key Details`, `### 💡 Recommendations`).\n"
-            "- Always start with a friendly 1-2 sentence overview with an emoji (e.g. 📌).\n"
-            "- Use **bold text** for all test names, numerical values, medicine names, or important terms.\n"
-            "- Use bullet points (`- `) with relevant emojis (e.g. ✅, ⚠️, 💊, ℹ️) for every list item.\n"
-            "- Keep the answer well-spaced, concise, visually appealing, and super easy to read.\n"
-        )
-
-        # ── 5. Context block
+        # ── 4. Context Block
         if chunks:
-            context_block = "Reference Facts (from document / knowledge base):\n"
+            context_block = "Reference Facts:\n"
             for idx, c in enumerate(chunks, 1):
                 context_block += f"Fact [{idx}]: {c['text']}\n\n"
         else:
             context_block = (
                 "Reference Facts: No specific document/KB match found for this question.\n"
-                "INSTRUCTION: Answer the user's question directly and concisely using your internal knowledge.\n\n"
+                "INSTRUCTION: Answer the user's question directly and concisely using internal knowledge.\n\n"
             )
 
-        # Show the decoded query to the LLM so it understands intent, but also show original query
+        # User Question Block
         if language == "Hinglish" and decoded_query != query:
             user_block = (
-                f"User's Question (original): {query}\n"
+                f"User Question (original): {query}\n"
                 f"Interpreted Meaning: {decoded_query}\n\n"
                 f"Answer (in natural Hinglish):"
             )
@@ -157,7 +144,6 @@ class PromptBuilder:
         full_prompt = (
             f"{system_role}\n"
             f"{rules}\n"
-            f"{formatting}\n"
             f"{doc_directive}"
             f"{context_block}"
             f"{user_block}"
@@ -168,3 +154,4 @@ class PromptBuilder:
 
 
 prompt_builder = PromptBuilder()
+

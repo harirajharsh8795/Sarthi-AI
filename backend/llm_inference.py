@@ -158,19 +158,49 @@ def _generate_answer_stream_inner(
     compressed_chunks = compression_res["compressed_chunks"]
     compression_duration = time.perf_counter() - start_compression
     
-    # 7. Adaptive Prompt Building
-    prompt = prompt_builder.build_adaptive_prompt(
-        rewritten_query, compressed_chunks, lang, domain, intent, plan, graph_triples
-    )
-    if lang == "Hinglish":
-        prompt = (
-            "IMPORTANT: Respond ONLY in natural, friendly Hinglish. "
-            "Give a clear, helpful, well-structured answer.\n\n"
-        ) + prompt
-    else:
-        prompt = f"IMPORTANT: You MUST respond ONLY in {lang}. Do not switch languages under any circumstances.\n\n" + prompt
+    # ── CONTEXT WINDOW & RAM TRADEOFF JUSTIFICATION ──
+    # Worst-case token estimation for a Devanagari Hindi query with 5 max-length context chunks:
+    # - 5 chunks x ~512-800 characters of Devanagari text = ~3,000 characters = ~3,750 tokens (Devanagari BPE ratio 1.25 tokens/char)
+    # - System instructions + rules + doc directive = ~300 tokens
+    # - User query + conversational history = ~150 tokens
+    # Total worst-case prompt = ~4,200 tokens (which silently truncated under default 2,048 num_ctx!).
+    #
+    # JETSON RAM TRADEOFF:
+    # Llama 3.2 1B base weights require ~0.9 GB FP16 VRAM/RAM.
+    # Increasing num_ctx to 4096 adds ~380 MB FP16 KV cache memory allocation.
+    # Total runtime footprint is ~1.3-1.5 GB Unified Memory, which easily fits within the 8 GB RAM budget
+    # of Jetson Orin Nano (leaving ~6.5 GB for OS, PyTorch embeddings, and UI).
+    NUM_CTX = 4096
+    SAFE_TOKEN_LIMIT = int(NUM_CTX * 0.85)  # 85% of 4096 = 3,481 tokens max for prompt
 
-    
+    # 7. Adaptive Prompt Building & Token Budget Safety Check
+    def _assemble_prompt(chunks_to_use):
+        p = prompt_builder.build_adaptive_prompt(
+            rewritten_query, chunks_to_use, lang, domain, intent, plan, graph_triples
+        )
+        if lang == "Hinglish":
+            return "IMPORTANT: Respond ONLY in natural, friendly Hinglish. Give a clear, helpful, well-structured answer.\n\n" + p
+        else:
+            return f"IMPORTANT: You MUST respond ONLY in {lang}. Do not switch languages under any circumstances.\n\n" + p
+
+    prompt = _assemble_prompt(compressed_chunks)
+    estimated_tokens = prompt_builder.estimate_token_count(prompt)
+
+    # If prompt exceeds 85% of num_ctx, iteratively drop lowest-similarity context chunks first
+    if estimated_tokens > SAFE_TOKEN_LIMIT and compressed_chunks:
+        logger.warning(
+            f"Prompt estimated tokens ({estimated_tokens}) exceeds 85% limit ({SAFE_TOKEN_LIMIT}) of num_ctx ({NUM_CTX}). "
+            f"Truncating lowest-similarity context chunks."
+        )
+        sorted_by_score = sorted(compressed_chunks, key=lambda c: c.get("similarity_score", 0.0))
+        while estimated_tokens > SAFE_TOKEN_LIMIT and len(compressed_chunks) > 1:
+            lowest_chunk = sorted_by_score.pop(0)
+            if lowest_chunk in compressed_chunks:
+                compressed_chunks.remove(lowest_chunk)
+            prompt = _assemble_prompt(compressed_chunks)
+            estimated_tokens = prompt_builder.estimate_token_count(prompt)
+            logger.warning(f"Truncated 1 lowest-similarity chunk. New estimated tokens: {estimated_tokens}")
+
     # Sanitize user query string (strip trailing slashes that break string formatting)
     query = query.strip().rstrip('\\').rstrip('/').strip()
 
@@ -183,13 +213,14 @@ def _generate_answer_stream_inner(
             "temperature": 0.1,
             "top_p": 0.9,
             "top_k": 40,
-            "num_ctx": 4096,
+            "num_ctx": NUM_CTX,
             "num_predict": 512,
             "repeat_penalty": 1.25,
             "presence_penalty": 0.5,
             "frequency_penalty": 0.5
         }
     }
+
     
     full_text = ""
     total_tokens = 0
