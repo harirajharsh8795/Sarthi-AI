@@ -82,7 +82,7 @@ class GraphService:
                     "model": settings.LLM_MODEL_NAME,
                     "prompt": prompt,
                     "stream": False,
-                    "options": {"temperature": 0.0}
+                    "options": {"temperature": 0.0, "num_gpu": 99}
                 },
                 timeout=8
             )
