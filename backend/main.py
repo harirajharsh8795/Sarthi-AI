@@ -210,13 +210,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-        "http://0.0.0.0:5173",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -970,14 +964,17 @@ app.include_router(v1_router, prefix="/api")
 
 
 # 4. Static Single-Page App Mounting Fallback
-dist_dir = "./frontend/dist"
+dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 if os.path.exists(dist_dir):
+    logger.info(f"Mounting production static frontend from: {dist_dir}")
     assets_dir = os.path.join(dist_dir, "assets")
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
         
     @app.get("/{fallback_path:path}")
     def serve_frontend(fallback_path: str):
+        if fallback_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="API endpoint not found")
         index_file = os.path.join(dist_dir, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)
