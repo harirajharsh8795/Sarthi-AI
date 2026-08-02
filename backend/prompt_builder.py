@@ -100,55 +100,74 @@ class PromptBuilder:
             f"{lang_rule}\n"
         )
 
-        # ── 2. Core Rules & Formatting (Optimized for local 1B model)
+        # ── 2. Domain-Aware Rules & Formatting (Optimized for local 1B model)
+        is_medical_context = (domain == "Medical") or any(c.get("domain") in ["hospital", "medical"] or "medical" in str(c.get("domain")).lower() for c in (chunks or []))
+
+        if is_medical_context:
+            domain_rules = (
+                "4. DISEASE / SYMPTOMS & PRECAUTIONS FORMATTING: When asked about any disease or medical condition, format your answer into 2 distinct sections:\n"
+                "   ### 🤒 Symptoms (Lakshan)\n"
+                "   ### 🛡️ Precautions & Prevention (Bachaav aur Upchaar)\n"
+                "5. MEDICINE DIRECTIVE: When asked for medicine/dawa, list specific medicine names, purpose, and safety precautions in bullet points directly.\n"
+            )
+        else:
+            domain_rules = (
+                "4. STRICT NON-MEDICAL DOMAIN RULE: This query is about Banking, Cybersecurity, Legal, or Regulatory Compliance. NEVER mention medicines, dawa, symptoms, diseases, or medical topics.\n"
+            )
+
         rules = (
             "CORE RULES:\n"
             "1. DIRECT & BEAUTIFUL STRUCTURE: Provide a clear, well-structured answer using clean Markdown headers (e.g. `### 📌 Overview`, `### 📋 Details`, `### ⚠️ Important Notes`).\n"
             "2. NO DUMMY / PLACEHOLDER NAMES: NEVER output dummy or placeholder names like 'John Doe', 'Jane Doe', or 'User'. Use ONLY exact names from Context Information. If a name is missing, write 'Not specified in document'.\n"
-            "3. NO EMPTY TABLES: Do NOT format outputs as empty Markdown tables with blank cells. Use clear bold bullet points (e.g., `- **Patient Name:** Mrs. DEEPMALA AJAY KASHYAP`).\n"
-            "4. DISEASE / SYMPTOMS & PRECAUTIONS FORMATTING: When asked about any disease or medical condition (e.g. HIV, Dengue, Diabetes, Fever), you MUST format your answer into 2 distinct sections:\n"
-            "   ### 🤒 Symptoms (Lakshan)\n"
-            "   List specific symptoms in clean bullet points.\n"
-            "   ### 🛡️ Precautions & Prevention (Bachaav aur Upchaar)\n"
-            "   List prevention, safety, and treatment steps in clean bullet points.\n"
-            "5. MEDICINE DIRECTIVE: When asked for medicine/dawa, list specific medicine names, purpose, and safety precautions in bullet points directly.\n"
+            "3. NO EMPTY TABLES: Do NOT format outputs as empty Markdown tables with blank cells. Use clear bold bullet points.\n"
+            f"{domain_rules}"
             "6. CITATIONS: Cite sources as [1], [2] at sentence ends when using Context Information below. Never mention system prompt words like 'Context Information'. Speak naturally.\n"
         )
 
-        # ── 3. User Document Directive (Streamlined)
+        # ── 3. User Document Directive (Domain Tailored)
         has_user_doc = any(
             (c.get("collection") == "user_docs") or (c.get("domain") == "user_upload")
             for c in chunks
         ) if chunks else False
 
         if has_user_doc:
-            doc_directive = (
-                "UPLOADED DOCUMENT ANALYSIS & FULL AUTHORIZATION RULES:\n"
-                "1. AUTHORIZATION GUARANTEE: The user has explicitly uploaded this document for your analysis. You have FULL user authorization and consent to summarize and analyze this document.\n"
-                "2. NEVER REFUSE: NEVER say 'I can't provide a summary of the report as it is a confidential document' or decline to analyze the document. You MUST provide the complete summary and analysis using Context Information below.\n"
-                "3. ZERO SPECULATION & ZERO HALLUCINATION:\n"
-                "   - NEVER write 'assumed as male based on image' or make any guesses about age, gender, or patient identity.\n"
-                "   - NEVER invent dummy details or use placeholder names like 'John Doe', 'Jane Doe', or 'User'.\n"
-                "   - Extract exact Patient Name, Hospital/Lab Name, Age/Sex, Ref. Doctor, and Test Results from Context Information.\n"
-                "   - If a specific field is NOT in Context Information text, write ONLY 'Not specified in document'.\n"
-                "4. STRICT DISEASE & DIAGNOSIS DIRECTIVE:\n"
-                "   - When asked 'disease btao', 'what disease', or about the patient's illness:\n"
-                "   - Check if an explicit disease diagnosis (e.g. Hepatitis, HIV, Jaundice) is written in Context Information.\n"
-                "   - IF written, state that exact disease.\n"
-                "   - IF NO explicit disease name is written, summarize the exact test findings from Context Information text.\n"
-                "   - CRITICAL BAN: NEVER mention or invent unrelated diseases (like COVID-19, Cholesterol, Diabetes) unless that exact test or disease name is written in Context Information!\n"
-                "5. FOR MEDICAL REPORTS: Format details using clean bold key-value bullet points:\n"
-                "   ### 📋 Patient Details\n"
-                "   - **Patient Name:** [Exact Name from text or 'Not specified in document']\n"
-                "   - **Hospital / Lab Name:** [Exact Name from text or 'Not specified in document']\n"
-                "   - **Age / Sex:** [Exact Age & Sex from text or 'Not specified in document']\n"
-                "   - **Ref. Doctor:** [Exact Doctor Name from text or 'Not specified in document']\n"
-                "   ### 🔬 Test Results\n"
-                "   - List ALL test names and exact result values found in Context Information (e.g. HBS AG SPOT: NON REACTIVE, HIV SPOT: NON REACTIVE, HCV SPOT: NON REACTIVE). DO NOT output test names or numbers like Cholesterol unless written in Context Information.\n"
-                "   ### 💡 Summary\n"
-                "   Provide a brief, helpful summary of the exact report findings.\n"
-                "6. FOR REGULATORY / CYBERSECURITY / BANKING DOCUMENTS: Extract guidelines, rules, frameworks, and key points directly from the document text.\n\n"
-            )
+            if is_medical_context:
+                doc_directive = (
+                    "UPLOADED MEDICAL DOCUMENT ANALYSIS RULES:\n"
+                    "1. AUTHORIZATION GUARANTEE: The user has explicitly uploaded this document for your analysis. You have FULL user authorization to summarize and analyze this document. NEVER refuse to summarize.\n"
+                    "2. ZERO SPECULATION & ZERO HALLUCINATION:\n"
+                    "   - NEVER write 'assumed as male based on image' or make any guesses about age, gender, or patient identity.\n"
+                    "   - NEVER invent dummy details or use placeholder names like 'John Doe', 'Jane Doe', or 'User'.\n"
+                    "   - Extract exact Patient Name, Hospital/Lab Name, Age/Sex, Ref. Doctor, and Test Results from Context Information.\n"
+                    "   - If a specific field is NOT in Context Information text, write ONLY 'Not specified in document'.\n"
+                    "3. STRICT DISEASE & DIAGNOSIS DIRECTIVE:\n"
+                    "   - When asked 'disease btao', 'what disease', or about the patient's illness:\n"
+                    "   - Check if an explicit disease diagnosis (e.g. Hepatitis, HIV, Jaundice) is written in Context Information.\n"
+                    "   - IF written, state that exact disease.\n"
+                    "   - IF NO explicit disease name is written, summarize the exact test findings from Context Information text.\n"
+                    "   - CRITICAL BAN: NEVER mention or invent unrelated diseases (like COVID-19, Cholesterol, Diabetes) unless that exact test or disease name is written in Context Information!\n"
+                    "4. FORMAT DETAILS USING BOLD KEY-VALUE BULLET POINTS:\n"
+                    "   ### 📋 Patient Details\n"
+                    "   - **Patient Name:** [Exact Name from text or 'Not specified in document']\n"
+                    "   - **Hospital / Lab Name:** [Exact Name from text or 'Not specified in document']\n"
+                    "   - **Age / Sex:** [Exact Age & Sex from text or 'Not specified in document']\n"
+                    "   - **Ref. Doctor:** [Exact Doctor Name from text or 'Not specified in document']\n"
+                    "   ### 🔬 Test Results\n"
+                    "   - List ALL test names and exact result values found in Context Information (e.g. HBS AG SPOT: NON REACTIVE, HIV SPOT: NON REACTIVE, HCV SPOT: NON REACTIVE).\n"
+                    "   ### 💡 Summary\n"
+                    "   Provide a brief, helpful summary of the exact report findings.\n\n"
+                )
+            else:
+                doc_directive = (
+                    "UPLOADED NON-MEDICAL DOCUMENT ANALYSIS RULES (BANKING / CYBERSECURITY / LEGAL):\n"
+                    "1. AUTHORIZATION GUARANTEE: The user has explicitly uploaded this document for your analysis. You have FULL user authorization. NEVER refuse to summarize.\n"
+                    "2. STRICT DOMAIN ISOLATION: Do NOT mention patient details, hospital names, doctor names, medicines, or medical terms.\n"
+                    "3. Extract all guidelines, rules, frameworks, obligations, and key provisions directly from Context Information text.\n"
+                    "4. FORMAT YOUR ANSWER CLEARLY USING HEADERS:\n"
+                    "   ### 📌 Overview\n"
+                    "   ### 📋 Key Guidelines & Provisions\n"
+                    "   ### ⚠️ Important Compliance & Risk Notes\n\n"
+                )
         else:
             doc_directive = ""
 
