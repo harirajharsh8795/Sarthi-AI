@@ -967,24 +967,26 @@ app.include_router(v1_router, prefix="/api/v1")
 app.include_router(v1_router, prefix="/api")
 
 
-# 4. Static Single-Page App Mounting Fallback
+# 4. Static Single-Page App Mounting — uses Starlette sub-app (checked AFTER router routes)
+class SPAStaticFiles(StaticFiles):
+    """Serves static files from dist/, falls back to index.html for SPA client-side routing."""
+    async def get_response(self, path, scope):
+        try:
+            response = await super().get_response(path, scope)
+            if response.status_code == 404:
+                # SPA fallback — serve index.html for any unknown path
+                return await super().get_response("index.html", scope)
+            return response
+        except Exception:
+            return await super().get_response("index.html", scope)
+
 dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 if os.path.exists(dist_dir):
-    logger.info(f"Mounting production static frontend from: {dist_dir}")
-    assets_dir = os.path.join(dist_dir, "assets")
-    if os.path.exists(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
-        
-    @app.get("/{fallback_path:path}")
-    def serve_frontend(fallback_path: str):
-        if fallback_path.startswith("api") or fallback_path.startswith("docs") or fallback_path.startswith("openapi.json"):
-            raise HTTPException(status_code=404, detail="API endpoint not found")
-        index_file = os.path.join(dist_dir, "index.html")
-        if os.path.exists(index_file):
-            return FileResponse(index_file)
-        return {"message": "Frontend build files found but index.html is missing."}
+    logger.info(f"Mounting production SPA frontend from: {dist_dir}")
+    app.mount("/", SPAStaticFiles(directory=dist_dir, html=True), name="spa")
+else:
+    logger.warning(f"Frontend dist not found at {dist_dir}. Run 'cd frontend && npm run build' first.")
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
