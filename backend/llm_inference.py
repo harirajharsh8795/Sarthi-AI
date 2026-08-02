@@ -204,27 +204,24 @@ def _generate_answer_stream_inner(
     # Sanitize user query string (strip trailing slashes that break string formatting)
     query = query.strip().rstrip('\\').rstrip('/').strip()
 
-    # 8. Local LLM streaming with optimal speed & Jetson Orin hardware options
+    # 8. Local LLM streaming — minimal payload for max stability on host Ollama
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
-        "stream": True,
-        "options": {
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "num_ctx": NUM_CTX,
-            "num_predict": 384
-        }
+        "stream": True
     }
 
-
-    
     full_text = ""
     total_tokens = 0
     token_buffer = ""
     
     try:
         response = requests.post(settings.OLLAMA_URL, json=payload, stream=True, timeout=120)
+        if response.status_code != 200:
+            logger.warning(f"Ollama returned HTTP {response.status_code}: {response.text[:200]}")
+            # Retry once after 1s
+            time.sleep(1)
+            response = requests.post(settings.OLLAMA_URL, json=payload, stream=True, timeout=120)
         response.raise_for_status()
         
         for line in response.iter_lines():
