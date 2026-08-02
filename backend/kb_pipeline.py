@@ -734,8 +734,28 @@ def ingest_user_document_task(
             logger.warning(f"No direct text extracted from {original_filename}. Creating fallback document chunk.")
             pages_text = [(1, f"Uploaded Document: {original_filename}\nFile Format: {ext}\nNote: User uploaded this file for analysis and summary.")]
 
-        # Line merging across OCR passes guarantees complete capture of patient header + tabular results
-        pass
+        # Deterministically parse patient demographics (Name, Hospital, Doctor, Age/Sex) and prepend header
+        full_doc_text = "\n".join(t for _, t in pages_text)
+        try:
+            from report_parser import extract_demographics_from_text
+            demos = extract_demographics_from_text(full_doc_text)
+            if demos:
+                header_lines = ["--- EXTRACTED REPORT METADATA ---"]
+                if demos.get("patient_name"):
+                    header_lines.append(f"Patient Name: {demos['patient_name']}")
+                if demos.get("hospital_name"):
+                    header_lines.append(f"Hospital / Lab Name: {demos['hospital_name']}")
+                if demos.get("ref_doctor"):
+                    header_lines.append(f"Ref. Doctor: {demos['ref_doctor']}")
+                if demos.get("age_sex"):
+                    header_lines.append(f"Age / Sex: {demos['age_sex']}")
+                header_lines.append("---------------------------------")
+                header_prefix = "\n".join(header_lines)
+                if pages_text:
+                    p1_num, p1_txt = pages_text[0]
+                    pages_text[0] = (p1_num, f"{header_prefix}\n\n{p1_txt}")
+        except Exception as demo_err:
+            logger.debug(f"Demographic parsing error: {demo_err}")
             
         if ext in {".docx", ".jpg", ".jpeg", ".png", ".webp"}:
             sample_text = ""
