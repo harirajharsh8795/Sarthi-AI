@@ -976,7 +976,7 @@ if os.path.exists(dist_dir):
         
     @app.get("/{fallback_path:path}")
     def serve_frontend(fallback_path: str):
-        if fallback_path.startswith("api/"):
+        if fallback_path.startswith("api") or fallback_path.startswith("docs") or fallback_path.startswith("openapi.json"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
         index_file = os.path.join(dist_dir, "index.html")
         if os.path.exists(index_file):
