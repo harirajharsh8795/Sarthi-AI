@@ -46,6 +46,18 @@ def extract_test_results_from_text(text: str) -> List[Dict[str, str]]:
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     results = []
 
+    # Strategy 0: Explicit Serology / Rapid Spot Tests (HBS AG SPOT, HIV SPOT, HCV SPOT, DENGUE, VDRL, etc.)
+    serology_re = re.compile(
+        r"(HBS\s*AG(?:\s*SPOT)?|HIV(?:\s*SPOT)?|HCV(?:\s*SPOT)?|ANTI\s*HCV|DENGUE\s*NS1|TYPHIDOT|VDRL|SYPHILIS|COVID\s*RAPID)\b[\s\S]*?(NON\s*-?\s*REACTIVE|REACTIVE|POSITIVE|NEGATIVE|NOT\s+DETECTED|DETECTED)",
+        re.IGNORECASE
+    )
+    for m in serology_re.finditer(text):
+        t_name = m.group(1).strip().upper()
+        raw_res = m.group(2).strip()
+        norm_res = _normalize_result(raw_res)
+        if not any(r["test_name"] == t_name for r in results):
+            results.append({"test_name": t_name, "result": norm_res, "raw": f"{t_name} -> {norm_res}"})
+
     # Strategy 1: lines that end with a known token, e.g. "HCV SPOT    NON REACTIVE"
     token_re = re.compile(r"(.{3,80}?)\s{2,}\s*(NON\s*-?\s*REACTIVE|REACTIVE|POSITIVE|NEGATIVE|NOT\s+DETECTED|DETECTED)\b", re.IGNORECASE)
     for ln in lines:
@@ -53,7 +65,8 @@ def extract_test_results_from_text(text: str) -> List[Dict[str, str]]:
         if m:
             test = m.group(1).strip(' .:-\t')
             raw_res = m.group(2).strip()
-            results.append({"test_name": test, "result": _normalize_result(raw_res), "raw": raw_res})
+            if not any(r["test_name"] == test for r in results):
+                results.append({"test_name": test, "result": _normalize_result(raw_res), "raw": raw_res})
 
     # Strategy 2: lines that look like "Test Name : Result" or "Test Name : 12.3 U/L"
     colon_re = re.compile(r"^(.{3,80}?)\s*:\s*(.+)$")
@@ -62,21 +75,14 @@ def extract_test_results_from_text(text: str) -> List[Dict[str, str]]:
         if m:
             test = m.group(1).strip(' .:-\t')
             raw_res = m.group(2).strip()
-            # Avoid double-adding if already captured
-            if any(t["test_name"] == test for t in results):
-                continue
-            # If raw_res includes known tokens, normalize; else include as-is
-            normalized = None
-            for tok in COMMON_RESULT_TOKENS:
-                if tok in raw_res.upper():
-                    normalized = _normalize_result(tok)
-                    break
-            results.append({"test_name": test, "result": normalized or raw_res, "raw": raw_res})
+            if not any(t["test_name"] == test for t in results):
+                normalized = None
+                for tok in COMMON_RESULT_TOKENS:
+                    if tok in raw_res.upper():
+                        normalized = _normalize_result(tok)
+                        break
+                results.append({"test_name": test, "result": normalized or raw_res, "raw": raw_res})
 
-    # Strategy 3: Inline patterns like "HBS AG SPOT\nNON REACTIVE" — look at pairs of consecutive lines
-    for i in range(len(lines) - 1):
-        a = lines[i]
-        b = lines[i + 1]
     # Strategy 4: Numeric test result lines (e.g. "Serum SGPT (ALT) 78.32 10-40 IU/L" or "Serum Bilirubin Total 1.9")
     numeric_re = re.compile(r"^([A-Za-z0-9\s\(\)/-]{3,60}?)\s+([\d\.]+)\s*([A-Za-z%/µmglIU]+)?(?:\s+[\d\.-]+)?", re.IGNORECASE)
     for ln in lines:
@@ -86,7 +92,6 @@ def extract_test_results_from_text(text: str) -> List[Dict[str, str]]:
             val = m.group(2).strip()
             unit = (m.group(3) or "").strip()
             res_str = f"{val} {unit}".strip()
-            # Exclude header words or non-test strings
             if test.lower() not in ("test", "patient name", "reg no", "sample id", "bed no", "print time", "age", "sex", "method", "unit") and len(test) >= 3:
                 if not any(t["test_name"] == test for t in results):
                     results.append({"test_name": test, "result": res_str, "raw": ln})
@@ -120,6 +125,7 @@ def extract_demographics_from_text(text: str) -> Dict[str, str]:
 
     # 2. Hospital / Lab Name Regexes
     hosp_patterns = [
+        r"(HOLY\s*FAMILY\s*HOSPITAL)",
         r"(?:Hospital|Lab|Diagnostic|Pathology|Clinic|Center|Centre|Laboratory)\s*[:\-]\s*([A-Za-z0-9\.\s&]{3,50})",
         r"([A-Za-z\s&]{3,40}(?:Hospital|Diagnostic|Pathology|Lab|Clinic|Center))"
     ]
@@ -145,7 +151,7 @@ def extract_demographics_from_text(text: str) -> Dict[str, str]:
 
     # 4. Age / Sex Regexes
     age_patterns = [
-        r"(?:Age\s*/\s*(?:Sex|Gender)|Age|Gender|Sex)\s*[:\-]\s*([\d\sA-Za-z/,\.-]{2,25})"
+        r"(?:Age\s*/\s*(?:Sex|Gender)|Age|Gender|Sex)\s*[:\-]\s*([\d\sA-Za-z/,\.-]{2,45})"
     ]
     for pat in age_patterns:
         m = re.search(pat, text, re.IGNORECASE)
@@ -167,8 +173,11 @@ def infer_organ_system_from_text(text: str) -> str:
 
     t_upper = text.upper()
 
+    # Serology / Viral Markers (HIV, HBsAg, HCV)
+    if any(k in t_upper for k in ["HIV", "HBSAG", "HCV", "SEROLOGY", "VDRL", "DENGUE"]):
+        return "Lab Serology / Viral Markers Screening (HBsAg, HIV 1&2, Anti-HCV)"
     # Liver Function Test (LFT)
-    if any(k in t_upper for k in ["BILIRUBIN", "SGPT", "SGOT", "ALT", "AST", "HBSAG", "HCV", "LIVER", "ALKALINE PHOSPHATASE"]):
+    if any(k in t_upper for k in ["BILIRUBIN", "SGPT", "SGOT", "ALT", "AST", "LIVER", "ALKALINE PHOSPHATASE"]):
         return "Liver Function Test (LFT) / Hepatic Parameters"
     # Kidney Function Test (KFT)
     if any(k in t_upper for k in ["CREATININE", "UREA", "URIC ACID", "KIDNEY", "RENAL"]):
