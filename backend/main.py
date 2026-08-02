@@ -212,7 +212,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -967,25 +967,22 @@ app.include_router(v1_router, prefix="/api/v1")
 app.include_router(v1_router, prefix="/api")
 
 
-# 4. Static Single-Page App Mounting — uses Starlette sub-app (checked AFTER router routes)
-class SPAStaticFiles(StaticFiles):
-    """Serves static files from dist/, falls back to index.html for SPA client-side routing."""
-    async def get_response(self, path, scope):
-        try:
-            response = await super().get_response(path, scope)
-            if response.status_code == 404:
-                # SPA fallback — serve index.html for any unknown path
-                return await super().get_response("index.html", scope)
-            return response
-        except Exception:
-            return await super().get_response("index.html", scope)
-
+# 4. Production Static Frontend (dead-simple: no custom classes, no catch-all)
 dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 if os.path.exists(dist_dir):
-    logger.info(f"Mounting production SPA frontend from: {dist_dir}")
-    app.mount("/", SPAStaticFiles(directory=dist_dir, html=True), name="spa")
+    logger.info(f"Serving production frontend from: {dist_dir}")
+
+    # Serve JS/CSS bundles
+    assets_dir = os.path.join(dist_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="static-assets")
+
+    # Serve index.html at root
+    @app.get("/", include_in_schema=False)
+    def serve_index():
+        return FileResponse(os.path.join(dist_dir, "index.html"), media_type="text/html")
 else:
-    logger.warning(f"Frontend dist not found at {dist_dir}. Run 'cd frontend && npm run build' first.")
+    logger.warning(f"Frontend dist not found at {dist_dir}. Run 'cd frontend && npm run build'.")
 
 if __name__ == "__main__":
     import uvicorn
