@@ -218,11 +218,14 @@ def _generate_answer_stream_inner(
     try:
         response = requests.post(settings.OLLAMA_URL, json=payload, stream=True, timeout=120)
         if response.status_code != 200:
-            logger.warning(f"Ollama returned HTTP {response.status_code}: {response.text[:200]}")
-            # Retry once after 1s
+            err_msg = response.text[:300]
+            logger.warning(f"Ollama returned HTTP {response.status_code}: {err_msg}")
+            # If 500 error, retry with simplified direct prompt to recover from context length / GGUF runner crash
+            simple_payload = {"model": MODEL_NAME, "prompt": f"Question: {query}\n\nProvide a helpful, clear, and direct answer:", "stream": True}
             time.sleep(1)
-            response = requests.post(settings.OLLAMA_URL, json=payload, stream=True, timeout=120)
-        response.raise_for_status()
+            response = requests.post(settings.OLLAMA_URL, json=simple_payload, stream=True, timeout=120)
+            if response.status_code != 200:
+                raise RuntimeError(f"Ollama Error ({response.status_code}): {response.text[:200]}")
         
         for line in response.iter_lines():
             if line:
