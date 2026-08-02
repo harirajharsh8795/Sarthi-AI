@@ -286,15 +286,14 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
         user_chunks = process_results(results_user, "user_docs", norm_q)
         
         # If semantic search returned zero results above threshold, fall back to forced sequential retrieval
-        if not user_chunks:
+        if not user_chunks and active_conv_docs:
             doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
-            if doc_ids_to_use:
-                user_chunks = force_retrieve_user_doc_chunks(
-                    session_id,
-                    conversation_id=conversation_id,
-                    document_ids=doc_ids_to_use,
-                    n=8,
-                )
+            user_chunks = force_retrieve_user_doc_chunks(
+                session_id,
+                conversation_id=conversation_id,
+                document_ids=doc_ids_to_use if doc_ids_to_use else None,
+                n=8,
+            )
 
     # 4. Consolidated Domain Classification & ChromaDB Retrieval
     domain_label, domain_conf = classify_domain(query)
@@ -378,8 +377,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)
     
-    # When user has uploaded a document in active conversation, purge background KB chunks to prevent citation leaks
-    if active_conv_docs or len(user_chunks) > 0:
+    if len(user_chunks) > 0:
         kb_chunks = []
         
     merged_chunks = user_chunks + kb_chunks
