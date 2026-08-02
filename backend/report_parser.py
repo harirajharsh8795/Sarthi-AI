@@ -156,3 +156,31 @@ def extract_demographics_from_text(text: str) -> Dict[str, str]:
                 break
 
     return demographics
+
+
+def infer_organ_system_from_text(text: str) -> str:
+    """
+    Infers organ system / test category from text to prevent disease hallucinations.
+    """
+    if not text:
+        return ""
+
+    t_upper = text.upper()
+
+    # Liver Function Test (LFT)
+    if any(k in t_upper for k in ["BILIRUBIN", "SGPT", "SGOT", "ALT", "AST", "HBSAG", "HCV", "LIVER", "ALKALINE PHOSPHATASE"]):
+        return "Liver Function Test (LFT) / Hepatic Parameters"
+    # Kidney Function Test (KFT)
+    if any(k in t_upper for k in ["CREATININE", "UREA", "URIC ACID", "KIDNEY", "RENAL"]):
+        return "Kidney Function Test (KFT) / Renal Parameters"
+    # Complete Blood Count (CBC)
+    if any(k in t_upper for k in ["HEMOGLOBIN", "PLATELET", "WBC", "RBC", "TLC", "DLC", "NEUTROPHIL", "LYMPHOCYTE"]):
+        return "Complete Blood Count (CBC) / Hematology Report"
+    # Lipid Profile
+    if any(k in t_upper for k in ["CHOLESTEROL", "TRIGLYCERIDES", "HDL", "LDL", "LIPID"]):
+        return "Lipid Profile / Cardiovascular Test"
+    # Diabetes / Glucose
+    if any(k in t_upper for k in ["GLUCOSE", "HBA1C", "FASTING BLOOD SUGAR", "PPBS", "INSULIN"]):
+        return "Blood Sugar / Diabetes Report"
+
+    return ""

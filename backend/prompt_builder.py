@@ -130,7 +130,13 @@ class PromptBuilder:
                 "   - NEVER invent dummy details or use placeholder names like 'John Doe', 'Jane Doe', or 'User'.\n"
                 "   - Extract exact Patient Name, Hospital/Lab Name, Age/Sex, Ref. Doctor, and Test Results from Context Information.\n"
                 "   - If a specific field is NOT in Context Information text, write ONLY 'Not specified in document' without any extra words or speculation.\n"
-                "3. FOR MEDICAL REPORTS: Format details using clean bold key-value bullet points:\n"
+                "3. STRICT DISEASE & DIAGNOSIS DIRECTIVE:\n"
+                "   - When asked 'disease btao', 'what disease', or about the patient's illness:\n"
+                "   - Check if an explicit disease diagnosis (e.g. Jaundice, Fatty Liver, Hepatitis) is written in Context Information.\n"
+                "   - IF an explicit disease is written, state that exact disease.\n"
+                "   - IF NO explicit disease name is written, state clearly based on the test values (e.g., 'The document is a Liver Function Test (LFT). It shows elevated Bilirubin and SGPT levels indicating liver function/inflammation parameters, but does not explicitly name a specific disease').\n"
+                "   - CRITICAL BAN: NEVER mention or invent unrelated diseases (like COVID-19, HIV, Dengue, Flu) unless that exact disease name is written in Context Information!\n"
+                "4. FOR MEDICAL REPORTS: Format details using clean bold key-value bullet points:\n"
                 "   ### 📋 Patient Details\n"
                 "   - **Patient Name:** [Exact Name from text or 'Not specified in document']\n"
                 "   - **Hospital / Lab Name:** [Exact Name from text or 'Not specified in document']\n"
@@ -140,7 +146,7 @@ class PromptBuilder:
                 "   - List all test names and exact values found in text (e.g. Total Bilirubin: 1.9 mg/dl, SGPT: 78.32 IU/L).\n"
                 "   ### 💡 Summary\n"
                 "   Provide a brief, helpful summary of the report findings.\n"
-                "4. FOR REGULATORY / CYBERSECURITY / BANKING DOCUMENTS: Extract guidelines, rules, frameworks, and key points directly from the document text.\n\n"
+                "5. FOR REGULATORY / CYBERSECURITY / BANKING DOCUMENTS: Extract guidelines, rules, frameworks, and key points directly from the document text.\n\n"
             )
         else:
             doc_directive = ""
