@@ -103,8 +103,12 @@ class PromptBuilder:
         # ── 2. Core Rules & Formatting (Optimized for local 1B model)
         rules = (
             "CORE RULES:\n"
-            "1. DIRECT & BEAUTIFUL STRUCTURE: Provide a clear, well-structured answer using clean Markdown headers (e.g. `### 📌 Overview`, `### 📋 Step-by-Step Guide`, `### ⚠️ Important Notes`).\n"
-            "2. CONCISE & REPETITION-FREE: Focus strictly on the question asked. Do NOT repeat bullet points or sentences. Use clean markdown bullet points (`- `) instead of raw symbol bullets.\n"
+            "1. DIRECT & BEAUTIFUL STRUCTURE: Provide a clear, well-structured answer using clean Markdown headers (e.g. `### 📌 Overview`, `### 🩺 Key Symptoms`, `### 🛡️ Precautions & Prevention`, `### ⚠️ Important Notes`).\n"
+            "2. SYMPTOMS & PRECAUTIONS FORMAT: When asked about symptoms, precautions, or prevention for any medical condition (e.g., HIV, Dengue, Diabetes, Fever), ALWAYS organize the response strictly into two distinct sections:\n"
+            "### 🩺 Key Symptoms\n"
+            "- List specific symptoms in clean bullet points\n\n"
+            "### 🛡️ Precautions & Prevention\n"
+            "- List key precautions and prevention steps in clean bullet points\n\n"
             "3. MEDICINE/DAWA DIRECTIVE: When asked for medicine/dawa, list specific medicine names, purpose, and safety precautions in bullet points directly.\n"
             "4. CITATIONS: Cite sources as [1], [2] at sentence ends when using Context Information below. Never mention system prompt words like 'Context Information'. Speak naturally.\n"
         )
@@ -119,11 +123,20 @@ class PromptBuilder:
             doc_directive = (
                 "UPLOADED DOCUMENT ANALYSIS RULES:\n"
                 "1. The user has uploaded a document. You MUST answer based ONLY on the text provided in Context Information below.\n"
-                "2. STRICT FACTUAL GROUNDING: Rely ONLY on exact text from the document. NEVER say 'Please refer to the document'. Read the text in Context Information and answer directly!\n"
-                "3. ZERO HALLUCINATION: Extract exact names and test values. If a specific field is missing, state: 'This information is not available in the document.'\n"
-                "4. For medical reports: extract the EXACT Patient Name, Hospital/Lab Name, Age, Sex, Doctor Name, Test Names (e.g., HBS AG, HIV, HCV, CBC, Liver Function), and Results (e.g., NON REACTIVE, REACTIVE). Use headings like `### 📋 Patient Details`, `### 🔬 Test Results`, `### 💡 Summary`.\n"
+                "2. STRICT FACTUAL GROUNDING: Read the text in Context Information and fill ALL values directly into the output! NEVER leave table cells empty!\n"
+                "3. ZERO HALLUCINATION & NO PLACEHOLDERS: NEVER use placeholder names like 'John Doe' or 'Jane Doe'. Use ONLY the exact patient name written in Context Information. If a specific field is missing, write 'Not specified'.\n"
+                "4. FOR MEDICAL / LAB REPORTS: Format patient details using a completed Markdown table with real values filled into the Value column:\n"
+                "| Field | Value |\n"
+                "|---|---|\n"
+                "| Patient Name | [Exact Patient Name extracted from document] |\n"
+                "| Hospital / Lab Name | [Exact Hospital Name] |\n"
+                "| Age / Sex | [Exact Age and Sex] |\n"
+                "| Ref. Doctor | [Exact Doctor Name] |\n\n"
+                "Then list all test results and numerical values in clean bullet points:\n"
+                "### 🔬 Test Results\n"
+                "- **[Test Name]**: [Result Value] ([Normal Range / Status])\n\n"
                 "5. For regulatory/policy/cybersecurity documents: extract guidelines, rules, frameworks, and key points directly from the document text.\n"
-                "6. CRITICAL: Provide the exact answers from the Context Information text below. Do not give generic advice.\n\n"
+                "6. CRITICAL: Fill exact extracted text into the answer. Do not output blank table cells or generic advice.\n\n"
             )
         else:
             doc_directive = ""

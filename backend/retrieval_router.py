@@ -378,7 +378,8 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)
     
-    if len(user_chunks) > 0:
+    # When user has uploaded a document in active conversation, purge background KB chunks to prevent citation leaks
+    if active_conv_docs or len(user_chunks) > 0:
         kb_chunks = []
         
     merged_chunks = user_chunks + kb_chunks
