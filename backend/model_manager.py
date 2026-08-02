@@ -59,8 +59,7 @@ class ModelLifecycleManager:
                 json={
                     "model": self.model_name,
                     "prompt": "ping",
-                    "stream": False,
-                    "options": {"num_gpu": 99}
+                    "stream": False
                 },
                 timeout=30
             )

@@ -216,7 +216,6 @@ def _generate_answer_stream_inner(
             "num_ctx": NUM_CTX,
             "num_predict": 384,
             "repeat_penalty": 1.12,
-            "num_gpu": 99,
             "num_thread": 4,
             "use_mmap": True
         }
