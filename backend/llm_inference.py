@@ -214,10 +214,8 @@ def _generate_answer_stream_inner(
             "top_p": 0.9,
             "top_k": 40,
             "num_ctx": NUM_CTX,
-            "num_predict": 512,
-            "repeat_penalty": 1.25,
-            "presence_penalty": 0.5,
-            "frequency_penalty": 0.5,
+            "num_predict": 384,
+            "repeat_penalty": 1.12,
             "num_gpu": 1,
             "use_mmap": True
         }
@@ -241,8 +239,8 @@ def _generate_answer_stream_inner(
                 total_tokens += 1
                 token_buffer += token
                 
-                # Stream token immediately for instant response without buffering delay
-                if token_buffer:
+                # Stream in fast word/phrase chunks (>= 12 chars or sentence/line breaks) to prevent UI render lag
+                if len(token_buffer) >= 12 or any(c in token_buffer for c in ['\n', '.', '!', '?', ';']):
                     yield {
                         "type": "token",
                         "data": {"token": token_buffer}
@@ -251,6 +249,14 @@ def _generate_answer_stream_inner(
                 
                 if data.get("done", False):
                     break
+
+        # Flush any remaining text buffer
+        if token_buffer:
+            yield {
+                "type": "token",
+                "data": {"token": token_buffer}
+            }
+            token_buffer = ""
     except Exception as e:
         import traceback
         logger.error(f"Ollama inference failed: {e}\n{traceback.format_exc()}")

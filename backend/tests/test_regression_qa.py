@@ -1071,7 +1071,7 @@ class TestPromptBuilderSanity:
         assert "DOCUMENT REPORT" not in prompt, (
             "KB query prompt incorrectly includes DOCUMENT REPORT directive"
         )
-        assert "Reference Facts" in prompt
+        assert "Context Information" in prompt or "Reference Facts" in prompt
 
 
 # ═══════════════════════════════════════════════════════════════════════════

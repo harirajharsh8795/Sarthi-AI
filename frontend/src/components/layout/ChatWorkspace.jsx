@@ -277,10 +277,10 @@ export default function ChatWorkspace({
   };
 
   // Handle message send
-  const handleSend = async () => {
+  const handleSend = async (overrideContent) => {
     if (isStreaming || uploadingFile || transcribing || isRecording) return;
     
-    let currentInput = input;
+    let currentInput = overrideContent !== undefined ? overrideContent : input;
     if (!currentInput.trim() && !attachedFile) return;
 
     setInput("");
@@ -520,10 +520,10 @@ export default function ChatWorkspace({
     const trimmedMessages = messages.slice(0, idx);
     setMessages(trimmedMessages);
     
-    // Trigger sending again with new text
-    setInput(newContent);
+    // Pass newContent directly to avoid stale-closure issue with input state
+    setInput("");
     setTimeout(() => {
-      handleSend();
+      handleSend(newContent);
     }, 50);
   };
 

@@ -93,6 +93,7 @@ class IntentService:
             "savings", "khata", "paisa", "atm", "transaction",
             "emi", "cibil", "foreclosure", "prepayment", "mudra",
             "education", "gold", "balance", "nri", "personal", "home",
+            "cybersecurity", "cyber", "cscrf", "resilience", "compliance",
             "बैंक", "खाता", "लोन", "ब्याज", "पैसे", "एटीएम", "बचत", "ऋण",
         }
 

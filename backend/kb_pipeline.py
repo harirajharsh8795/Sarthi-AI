@@ -683,42 +683,40 @@ def ingest_user_document_task(
         
         start_extract = time.perf_counter()
         if ext == ".pdf":
-            pages_text, detected_lang = extract_text_and_language(file_path, "unknown")
-            has_text = any(t.strip() for _, t in pages_text)
+            doc = fitz.open(file_path)
+            pages_text = []
+            confidences = []
             
-            if not has_text:
-                logger.info(f"No text extracted via fitz for {file_path}. Falling back to OCR...")
-                ocr_used = True
-                
-                doc = fitz.open(file_path)
-                pages_text = []
-                confidences = []
-                
-                for i, page in enumerate(doc):
+            for i, page in enumerate(doc):
+                text = page.get_text().strip()
+                # Per-page OCR fallback if direct text extraction yields less than 30 characters
+                if len(text) < 30:
                     pix = page.get_pixmap(dpi=150)
                     temp_img_path = f"{file_path}_page_{i}.png"
                     pix.save(temp_img_path)
-                    
                     try:
-                        text, conf = extract_text_from_image_ocr(temp_img_path)
+                        ocr_text, conf = extract_text_from_image_ocr(temp_img_path)
                         from ocr_sanitizer import ocr_sanitizer
-                        text = ocr_sanitizer.sanitize_ocr_text(text)
-                        
-                        pages_text.append((i + 1, text))
-                        if conf > 0:
-                            confidences.append(conf)
+                        ocr_text = ocr_sanitizer.sanitize_ocr_text(ocr_text)
+                        if len(ocr_text.strip()) > len(text):
+                            text = ocr_text.strip()
+                            ocr_used = True
+                            if conf > 0:
+                                confidences.append(conf)
                     finally:
                         if os.path.exists(temp_img_path):
                             try:
                                 os.remove(temp_img_path)
-                            except:
+                            except Exception:
                                 pass
-                
-                doc.close()
-                if confidences:
-                    ocr_conf = sum(confidences) / len(confidences)
-                else:
-                    ocr_conf = 0.0
+                pages_text.append((i + 1, text))
+            doc.close()
+
+            # Set average OCR confidence if OCR was triggered for any page
+            if confidences:
+                ocr_conf = sum(confidences) / len(confidences)
+            elif ocr_used:
+                ocr_conf = 75.0
                     
         elif ext == ".docx":
             text = extract_text_from_docx(file_path)
@@ -780,7 +778,7 @@ def ingest_user_document_task(
 
         # Step 2: Chunking
         job_queue.update_job(job_id, "running", 40, "Chunking Text")
-        chunks = chunk_text(pages_text)
+        chunks = chunk_text(pages_text, chunk_size=800)
         chunk_count = len(chunks)
         if chunk_count == 0:
             raise ValueError("Document could not be chunked")
@@ -792,7 +790,7 @@ def ingest_user_document_task(
         # Use singleton embedding service
         model = get_embedding_model()
         texts = [c["text"] for c in chunks]
-        embeddings = model.encode(texts, show_progress_bar=False)
+        embeddings = model.encode(texts, show_progress_bar=False, batch_size=32)
         embed_time = time.perf_counter() - start_embed
         metrics_manager.record("embedding_time", embed_time)
 

@@ -9,7 +9,13 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import kb_pipeline
 import session_manager
+from intent_service import intent_service
 from glossary.query_expander import expand_query_with_glossary
+
+def classify_domain(query: str):
+    res = intent_service.classify_query(query)
+    return res.get("domain", "General"), res.get("confidence_score", 0.7)
+
 
 # Configuration
 MIN_SIMILARITY_SCORE = 0.15
