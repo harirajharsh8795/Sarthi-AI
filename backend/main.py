@@ -247,7 +247,6 @@ async def add_request_id_and_timing(request: Request, call_next):
     response.headers["X-Response-Time"] = f"{duration * 1000.0:.2f}ms"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Content-Security-Policy"] = "default-src 'self'"
     
     logger.info(f"{request.method} {request.url.path} completed in {duration * 1000.0:.2f}ms with status {response.status_code}")
     return response
@@ -722,8 +721,10 @@ def create_new_conversation(req: ConversationCreate):
         raise SaarthiError("SAARTHI_DB_ERROR", "Failed to create conversation.")
 
 @v1_router.get("/conversations/all")
-def get_all_conversations(device_id: str):
+def get_all_conversations(device_id: Optional[str] = None):
     try:
+        if not device_id:
+            return {"conversations": []}
         conversations = session_manager.list_all_conversations(device_id)
         return {"conversations": conversations}
     except Exception as e:
@@ -731,8 +732,10 @@ def get_all_conversations(device_id: str):
         raise SaarthiError("SAARTHI_DB_ERROR", "Failed to retrieve conversations.")
 
 @v1_router.get("/conversations")
-def get_conversations(session_id: str):
+def get_conversations(session_id: Optional[str] = None):
     try:
+        if not session_id:
+            return {"conversations": []}
         conversations = session_manager.list_conversations(session_id)
         return {"conversations": conversations}
     except Exception as e:
