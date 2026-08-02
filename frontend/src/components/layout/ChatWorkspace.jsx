@@ -7,7 +7,7 @@ import CameraModal from "../chat/CameraModal";
 import TypingIndicator from "../chat/TypingIndicator";
 import { translations } from "../../utils/localization";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 export default function ChatWorkspace({
   sessionId,
