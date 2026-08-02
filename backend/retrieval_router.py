@@ -386,10 +386,9 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)
     
-    if len(user_chunks) > 0 or active_conv_docs:
-        kb_chunks = []
-        
-    merged_chunks = user_chunks + kb_chunks
+    # Merge: Uploaded user_chunks are placed FIRST (Facts 1..N).
+    # Global KB chunks are kept SECOND as fallback context if the user document does not answer the query.
+    merged_chunks = user_chunks + kb_chunks[:3]
 
     # Enforce strict score bounding [0.0, 1.0]
     for c in merged_chunks:

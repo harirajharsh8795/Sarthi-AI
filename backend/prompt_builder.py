@@ -123,11 +123,12 @@ class PromptBuilder:
 
         if has_user_doc:
             doc_directive = (
-                "UPLOADED DOCUMENT ANALYSIS RULES:\n"
-                "1. The user has uploaded a document. You MUST answer based ONLY on the text provided in Context Information below.\n"
-                "2. STRICT FACTUAL GROUNDING: Rely ONLY on exact text from the document. Read the text in Context Information and answer directly!\n"
-                "3. ZERO HALLUCINATION & NO DUMMY NAMES: NEVER use 'John Doe' or invent dummy details. Extract exact patient name, age, sex, hospital name, and test values from Context Information.\n"
-                "4. FOR MEDICAL REPORTS: Format details using bold key-value bullet points:\n"
+                "UPLOADED DOCUMENT & DATABASE FALLBACK PRIORITY RULES:\n"
+                "1. The user has uploaded a document. FIRST check the uploaded document context (Facts [1], [2], etc.).\n"
+                "2. If the uploaded document contains the answer, answer strictly using the uploaded document text and cite its reference number (e.g. [1]).\n"
+                "3. ONLY IF the uploaded document does NOT contain the answer, check the secondary database context facts listed below it, answer using the database text, and cite the database source.\n"
+                "4. ZERO HALLUCINATION & NO DUMMY NAMES: NEVER invent dummy details or use 'John Doe'/'Jane Doe'/'User'. Extract exact patient name, age, sex, hospital name, and test values from Context Information. If a detail is missing, write 'Not specified in document'.\n"
+                "5. FOR MEDICAL REPORTS: Format details using bold key-value bullet points:\n"
                 "   ### 📋 Patient Details\n"
                 "   - **Patient Name:** [Exact Name from text]\n"
                 "   - **Hospital / Lab Name:** [Exact Name from text]\n"
@@ -137,8 +138,7 @@ class PromptBuilder:
                 "   - List all test names and exact results (e.g. Total Bilirubin: 1.9 mg/dl, SGPT: 78.32 IU/L).\n"
                 "   ### 💡 Summary\n"
                 "   Provide a brief, helpful summary of the report findings.\n"
-                "5. FOR REGULATORY / CYBERSECURITY / BANKING DOCUMENTS: Extract guidelines, rules, frameworks, and key points directly from the document text.\n"
-                "6. CRITICAL: Provide the exact answers from the Context Information text below. Do not give generic advice.\n\n"
+                "6. FOR REGULATORY / CYBERSECURITY / BANKING DOCUMENTS: Extract guidelines, rules, frameworks, and key points directly from the document text.\n\n"
             )
         else:
             doc_directive = ""

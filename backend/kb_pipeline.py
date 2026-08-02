@@ -598,15 +598,17 @@ def extract_text_from_image_ocr(image_path):
         best_text = direct_text if len(direct_text) > len(data_text) else data_text
         return best_text, mean_conf_out
 
-    # Multi-pass OCR: Pass 1 on original image, Pass 2 on contrast image, Pass 3 PSM 6
+    # Multi-pass OCR: Pass 1 auto layout, Pass 2 contrast auto, Pass 3 single block, Pass 4 sparse text (header boxes), Pass 5 columns
     raw_text1, conf1 = _do_pytesseract(img, psm_mode=3)
     raw_text2, conf2 = _do_pytesseract(contrasted, psm_mode=3)
     raw_text3, conf3 = _do_pytesseract(contrasted, psm_mode=6)
+    raw_text4, conf4 = _do_pytesseract(contrasted, psm_mode=11)
+    raw_text5, conf5 = _do_pytesseract(contrasted, psm_mode=4)
 
     # Merge unique non-duplicate lines across passes to capture both header demographics and tabular test results
     merged_lines = []
     seen = set()
-    for txt in [raw_text1, raw_text3, raw_text2]:
+    for txt in [raw_text1, raw_text4, raw_text3, raw_text5, raw_text2]:
         for line in txt.splitlines():
             line_clean = line.strip()
             if line_clean and line_clean.lower() not in seen:
@@ -614,7 +616,7 @@ def extract_text_from_image_ocr(image_path):
                 merged_lines.append(line_clean)
                 
     text = "\n".join(merged_lines).strip()
-    mean_conf = max(conf1, conf2, conf3)
+    mean_conf = max(conf1, conf2, conf3, conf4, conf5)
 
     # EasyOCR fallback if text length is short
     if len(text.strip()) < 60:
