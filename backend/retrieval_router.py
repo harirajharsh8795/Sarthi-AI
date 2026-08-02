@@ -224,18 +224,20 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     3. Retrieves from user_docs (strictly scoped to active conversation) and knowledge_base.
     4. Filters results using exact Cosine Similarity and local .md file priority.
     """
-    session_valid = check_session_exists(session_id)
-    
-    # Check if the ACTIVE conversation specifically has uploaded documents
+    # Check if the ACTIVE conversation (or session) specifically has uploaded documents
     active_conv_docs = []
-    if session_valid and conversation_id and conversation_id != "new":
-        active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
+    if session_id:
+        if conversation_id and conversation_id != "new":
+            active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
+        if not active_conv_docs:
+            active_conv_docs = session_manager.get_session_documents(session_id)
+
+    doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
 
     # 1. WHOLE-DOCUMENT SUMMARY INTENT:
     # If user explicitly requests a full document summary (e.g. "explain my report", "summary do"),
     # force sequential retrieval across ALL pages (n=25 chunks) in page order.
-    if session_valid and active_conv_docs and is_whole_document_summary_query(query):
-        doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
+    if active_conv_docs and is_whole_document_summary_query(query):
         if doc_ids_to_use:
             forced_chunks = force_retrieve_user_doc_chunks(
                 session_id,
@@ -270,24 +272,31 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     # 3. Retrieve from user_docs ONLY IF active conversation has uploaded documents
     user_chunks = []
     
-    if session_valid and active_conv_docs:
+    if active_conv_docs:
         user_collection = kb_pipeline.get_user_docs_collection()
-        where_conditions = [{"session_id": session_id}]
-        if conversation_id and conversation_id != "new":
-            where_conditions.append({"conversation_id": conversation_id})
-        where_filter = {"$and": where_conditions} if len(where_conditions) > 1 else where_conditions[0]
+        where_filter = None
+        if doc_ids_to_use:
+            if len(doc_ids_to_use) == 1:
+                where_filter = {"document_id": doc_ids_to_use[0]}
+            else:
+                where_filter = {"document_id": {"$in": doc_ids_to_use}}
+        elif session_id:
+            where_filter = {"session_id": session_id}
 
-        results_user = user_collection.query(
-            query_embeddings=[query_embedding],
-            n_results=8,
-            where=where_filter,
-            include=["metadatas", "documents", "distances"]
-        )
-        user_chunks = process_results(results_user, "user_docs", norm_q)
+        if where_filter:
+            try:
+                results_user = user_collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=8,
+                    where=where_filter,
+                    include=["metadatas", "documents", "distances"]
+                )
+                user_chunks = process_results(results_user, "user_docs", norm_q)
+            except Exception:
+                user_chunks = []
         
         # If semantic search returned zero results above threshold, fall back to forced sequential retrieval
         if not user_chunks and active_conv_docs:
-            doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
             user_chunks = force_retrieve_user_doc_chunks(
                 session_id,
                 conversation_id=conversation_id,
@@ -377,7 +386,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     user_chunks = sorted(user_chunks, key=lambda x: x["similarity_score"], reverse=True)
     kb_chunks = sorted(kb_chunks, key=lambda x: x["similarity_score"], reverse=True)
     
-    if len(user_chunks) > 0:
+    if len(user_chunks) > 0 or active_conv_docs:
         kb_chunks = []
         
     merged_chunks = user_chunks + kb_chunks
