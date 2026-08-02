@@ -25,11 +25,15 @@ echo "[2/6] Pulling latest code from GitHub..."
 cd ~/Sarthi-AI
 git pull origin chore/saarthi-ai-updates-20260731 || true
 
-# 3. Build production frontend
-echo "[3/6] Building production frontend..."
-cd ~/Sarthi-AI/frontend
-npm run build
-cd ~/Sarthi-AI
+# 3. Build production frontend (skip if dist/ already exists to avoid OOM on Jetson)
+if [ -d ~/Sarthi-AI/frontend/dist ]; then
+    echo "[3/6] Frontend dist/ already exists — skipping build (saves RAM)."
+else
+    echo "[3/6] Building production frontend (this may take a minute)..."
+    cd ~/Sarthi-AI/frontend
+    npm run build
+    cd ~/Sarthi-AI
+fi
 
 # 4. Start backend server (serves both API + static frontend on port 8000)
 echo "[4/6] Starting FastAPI server on port 8000..."

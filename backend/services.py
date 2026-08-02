@@ -40,20 +40,25 @@ class EmbeddingService:
                         logger.error(f"Failed to import SentenceTransformer: {ie}")
                         raise ie
 
-                    # Attempt loading model with CUDA fallback to CPU if GPU OOM/NVML error occurs
+                    # On ARM64/Jetson, Ollama LLM already occupies GPU VRAM.
+                    # CUDA driver OOM (NvMapMemAlloc error 12) is a HARD crash
+                    # that Python try/except cannot catch — force CPU for embeddings.
+                    import platform
                     device = "cpu"
-                    try:
-                        import torch
-                        if torch.cuda.is_available():
-                            try:
-                                # Test memory allocation
-                                torch.cuda.empty_cache()
-                                device = "cuda"
-                            except Exception as dev_err:
-                                logger.warning(f"CUDA available but memory check failed ({dev_err}). Falling back to CPU.")
-                                device = "cpu"
-                    except Exception:
-                        device = "cpu"
+                    if platform.machine() not in ("aarch64", "arm64"):
+                        try:
+                            import torch
+                            if torch.cuda.is_available():
+                                try:
+                                    torch.cuda.empty_cache()
+                                    device = "cuda"
+                                except Exception as dev_err:
+                                    logger.warning(f"CUDA available but memory check failed ({dev_err}). Falling back to CPU.")
+                                    device = "cpu"
+                        except Exception:
+                            device = "cpu"
+                    else:
+                        logger.info("ARM64/Jetson detected — forcing CPU for embedding model (GPU reserved for Ollama LLM).")
 
                     try:
                         # Try loading with offline local files first to avoid HuggingFace network latency
