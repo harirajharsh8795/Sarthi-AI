@@ -967,7 +967,7 @@ app.include_router(v1_router, prefix="/api/v1")
 app.include_router(v1_router, prefix="/api")
 
 
-# 4. Production Static Frontend (dead-simple: no custom classes, no catch-all)
+# 4. Production Static Frontend
 dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 if os.path.exists(dist_dir):
     logger.info(f"Serving production frontend from: {dist_dir}")
@@ -977,9 +977,23 @@ if os.path.exists(dist_dir):
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="static-assets")
 
-    # Serve index.html at root
+    # Serve other static files (favicon, icons, etc.)
     @app.get("/", include_in_schema=False)
     def serve_index():
+        return FileResponse(os.path.join(dist_dir, "index.html"), media_type="text/html")
+
+    # SPA catch-all: any non-API, non-asset path returns index.html
+    # This MUST be after all API routes are registered (they take priority)
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa_catchall(full_path: str):
+        # Never intercept API or asset requests
+        if full_path.startswith(("api/", "api", "assets/", "docs", "openapi.json", "redoc")):
+            raise HTTPException(status_code=404, detail="Not Found")
+        # Serve static file if it exists in dist/
+        file_path = os.path.join(dist_dir, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Otherwise return index.html for client-side routing
         return FileResponse(os.path.join(dist_dir, "index.html"), media_type="text/html")
 else:
     logger.warning(f"Frontend dist not found at {dist_dir}. Run 'cd frontend && npm run build'.")

@@ -53,15 +53,16 @@ class ModelLifecycleManager:
         start = time.perf_counter()
         
         try:
-            # Simple short instruction to load model weights
+            # Simple short instruction to load model weights and keep alive for 30 min
             r = requests.post(
                 settings.OLLAMA_URL,
                 json={
                     "model": self.model_name,
                     "prompt": "ping",
-                    "stream": False
+                    "stream": False,
+                    "keep_alive": "30m"
                 },
-                timeout=30
+                timeout=60
             )
             if r.status_code == 200:
                 self.warmup_duration_sec = time.perf_counter() - start

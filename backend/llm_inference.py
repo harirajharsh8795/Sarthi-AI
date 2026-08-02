@@ -204,11 +204,12 @@ def _generate_answer_stream_inner(
     # Sanitize user query string (strip trailing slashes that break string formatting)
     query = query.strip().rstrip('\\').rstrip('/').strip()
 
-    # 8. Local LLM streaming — minimal payload for max stability on host Ollama
+    # 8. Local LLM streaming — keep_alive prevents model unloading between requests
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
-        "stream": True
+        "stream": True,
+        "keep_alive": "30m"
     }
 
     full_text = ""
@@ -220,10 +221,20 @@ def _generate_answer_stream_inner(
         if response.status_code != 200:
             err_msg = response.text[:300]
             logger.warning(f"Ollama returned HTTP {response.status_code}: {err_msg}")
-            # If 500 error, retry with simplified direct prompt to recover from context length / GGUF runner crash
-            simple_payload = {"model": MODEL_NAME, "prompt": f"Question: {query}\n\nProvide a helpful, clear, and direct answer:", "stream": True}
-            time.sleep(1)
-            response = requests.post(settings.OLLAMA_URL, json=simple_payload, stream=True, timeout=120)
+            # Retry with progressively simpler prompts
+            for attempt in range(3):
+                wait = 2 ** attempt  # 1s, 2s, 4s
+                time.sleep(wait)
+                retry_payload = {
+                    "model": MODEL_NAME,
+                    "prompt": f"Question: {query}\n\nAnswer concisely:",
+                    "stream": True,
+                    "keep_alive": "30m"
+                }
+                logger.info(f"Retry attempt {attempt + 1}/3 with simplified prompt...")
+                response = requests.post(settings.OLLAMA_URL, json=retry_payload, stream=True, timeout=120)
+                if response.status_code == 200:
+                    break
             if response.status_code != 200:
                 raise RuntimeError(f"Ollama Error ({response.status_code}): {response.text[:200]}")
         
