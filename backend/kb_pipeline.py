@@ -523,28 +523,19 @@ def extract_text_from_image_ocr(image_path):
         logger.error(f"Failed to open image for OCR: {e}")
         return "", 0.0
 
-    # 1. Upscale small images to at least 1800px width for better OCR character recognition
+    # 1. Upscale image to target width for optimal character recognition
     orig_w, orig_h = img.size
-    TARGET_W = 1800
+    TARGET_W = 2000
     if orig_w < TARGET_W:
         scale = TARGET_W / orig_w
         new_w = int(orig_w * scale)
         new_h = int(orig_h * scale)
         img = img.resize((new_w, new_h), Image.LANCZOS)
 
-    # 2. Grayscale & Contrast enhancement
+    # 2. Gentle contrast & sharpening without destructive threshold binarization
     gray = ImageOps.grayscale(img)
     sharpened = gray.filter(ImageFilter.SHARPEN)
-    contrasted = ImageOps.autocontrast(sharpened, cutoff=2)
-
-    # 3. Binarization
-    img_np = np.array(contrasted)
-    mean_val = np.mean(img_np)
-    if mean_val > 160:
-        threshold = int(mean_val * 0.85)
-        processed_img = contrasted.point(lambda p: 255 if p > threshold else 0)
-    else:
-        processed_img = contrasted
+    contrasted = ImageOps.autocontrast(sharpened, cutoff=1)
 
     def _do_pytesseract(image_obj, psm_mode=3, lang="eng+hin"):
         try:
@@ -604,25 +595,21 @@ def extract_text_from_image_ocr(image_path):
         data_text = "\n".join(" ".join(lines[k]) for k in sorted_keys).strip()
         mean_conf_out = sum(confidences) / len(confidences) if confidences else 70.0
         
-        # Pick the longer / more complete text between direct string extraction and structured line extraction
         best_text = direct_text if len(direct_text) > len(data_text) else data_text
         return best_text, mean_conf_out
 
-    # Multi-pass OCR: try PSM 3 (auto layout) first, then PSM 6, then PSM 11
-    text, mean_conf = _do_pytesseract(processed_img, psm_mode=3)
-    if len(text.strip()) < 40:
-        text_psm6, conf6 = _do_pytesseract(processed_img, psm_mode=6)
-        if len(text_psm6.strip()) > len(text.strip()):
-            text, mean_conf = text_psm6, conf6
+    # Multi-pass OCR: Pass 1 on original image, Pass 2 on contrast image, Pass 3 PSM 6
+    raw_text1, conf1 = _do_pytesseract(img, psm_mode=3)
+    raw_text2, conf2 = _do_pytesseract(contrasted, psm_mode=3)
+    raw_text3, conf3 = _do_pytesseract(contrasted, psm_mode=6)
 
-    # Fallback pass on original image
-    if len(text.strip()) < 40:
-        raw_text, raw_conf = _do_pytesseract(img, psm_mode=3)
-        if len(raw_text.strip()) > len(text.strip()):
-            text, mean_conf = raw_text, raw_conf
+    # Choose text candidate with highest character count & medical keyword density
+    candidates = [(raw_text1, conf1), (raw_text2, conf2), (raw_text3, conf3)]
+    candidates.sort(key=lambda x: len(x[0].strip()), reverse=True)
+    text, mean_conf = candidates[0]
 
-    # EasyOCR fallback if Tesseract yields under 50 characters
-    if len(text.strip()) < 50:
+    # EasyOCR fallback if text length is short
+    if len(text.strip()) < 60:
         try:
             import easyocr
             reader = easyocr.Reader(['en', 'hi'], gpu=False)

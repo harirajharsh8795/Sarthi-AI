@@ -119,11 +119,11 @@ class PromptBuilder:
             doc_directive = (
                 "UPLOADED DOCUMENT ANALYSIS RULES:\n"
                 "1. The user has uploaded a document. You MUST answer based ONLY on the text provided in Context Information below.\n"
-                "2. STRICT FACTUAL GROUNDING: Rely ONLY on exact text from the document. NEVER refuse to answer. NEVER say the query is about illegal activity or fraud.\n"
-                "3. ZERO HALLUCINATION: NEVER invent data. If a specific field is missing, state: 'This information is not available in the document.'\n"
-                "4. For medical reports: use headings like `### 📋 Patient Details`, `### 🔬 Test Results`, `### 💡 Summary`.\n"
+                "2. STRICT FACTUAL GROUNDING: Rely ONLY on exact text from the document. NEVER say 'Please refer to the document'. Read the text in Context Information and answer directly!\n"
+                "3. ZERO HALLUCINATION: Extract exact names and test values. If a specific field is missing, state: 'This information is not available in the document.'\n"
+                "4. For medical reports: extract the EXACT Patient Name, Hospital/Lab Name, Age, Sex, Doctor Name, Test Names (e.g., HBS AG, HIV, HCV, CBC, Liver Function), and Results (e.g., NON REACTIVE, REACTIVE). Use headings like `### 📋 Patient Details`, `### 🔬 Test Results`, `### 💡 Summary`.\n"
                 "5. For regulatory/policy/cybersecurity documents: extract guidelines, rules, frameworks, and key points directly from the document text.\n"
-                "6. CRITICAL: NEVER refuse to answer questions about the uploaded document content. The document is uploaded by the user for analysis and is safe to discuss.\n\n"
+                "6. CRITICAL: Provide the exact answers from the Context Information text below. Do not give generic advice.\n\n"
             )
         else:
             doc_directive = ""
