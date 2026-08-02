@@ -212,12 +212,8 @@ def _generate_answer_stream_inner(
         "options": {
             "temperature": 0.1,
             "top_p": 0.9,
-            "top_k": 40,
             "num_ctx": NUM_CTX,
-            "num_predict": 384,
-            "repeat_penalty": 1.12,
-            "num_thread": 4,
-            "use_mmap": True
+            "num_predict": 384
         }
     }
 
@@ -260,7 +256,7 @@ def _generate_answer_stream_inner(
     except Exception as e:
         import traceback
         logger.error(f"Ollama inference failed: {e}\n{traceback.format_exc()}")
-        yield {"type": "error", "data": {"message": "Inference failed to connect to the model."}}
+        yield {"type": "error", "data": {"message": f"Inference error ({type(e).__name__}): {str(e)}"}}
         return
         
     generation_time_ms = (time.perf_counter() - start_time) * 1000
