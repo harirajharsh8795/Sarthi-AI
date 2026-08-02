@@ -22,12 +22,12 @@ class RankingService:
         ).lower()
         domain = str(metadata.get("domain", "")).lower()
         
-        # Local curated .md knowledge base files have top priority
-        if source_name.endswith(".md") or source_name.endswith(".txt") or "kb_md_" in source_name:
-            return 1.0
-        # User uploaded docs
+        # User uploaded docs have HIGHEST priority (1.0)
         if metadata.get("collection") == "user_docs" or "user_upload" in domain:
-            return 0.98
+            return 1.0
+        # Local curated .md knowledge base files
+        if source_name.endswith(".md") or source_name.endswith(".txt") or "kb_md_" in source_name:
+            return 0.95
         # External PDF manuals / public library docs
         return 0.75
 
@@ -56,8 +56,9 @@ class RankingService:
             overlap = self.compute_keyword_overlap(query, c["text"])
             trust = self.get_source_trust_score(c)
             
-            # Filter out completely irrelevant chunks (similarity < 0.25 and zero keyword overlap)
-            if sim < 0.25 and overlap == 0.0:
+            is_user_doc = (c.get("collection") == "user_docs" or "user_upload" in str(c.get("domain", "")))
+            # Filter out completely irrelevant non-user chunks (similarity < 0.25 and zero keyword overlap)
+            if not is_user_doc and sim < 0.25 and overlap == 0.0:
                 continue
 
             # Multiplicative hybrid score: 65% similarity, 35% keyword overlap, with minor trust multiplier (0.95 to 1.0)
