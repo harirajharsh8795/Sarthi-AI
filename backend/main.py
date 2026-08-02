@@ -78,13 +78,14 @@ class SpeakRequest(BaseModel):
 _frontend_process: Optional[subprocess.Popen] = None
 
 def _start_frontend() -> None:
-    """Launch the Vite frontend dev-server as a background subprocess and open browser."""
+    """Launch the Vite frontend dev-server as a background subprocess unless static build exists."""
     global _frontend_process
     backend_dir = os.path.dirname(os.path.abspath(__file__))
     frontend_dir = os.path.join(os.path.dirname(backend_dir), "frontend")
+    dist_dir = os.path.join(frontend_dir, "dist")
 
-    if not os.path.isdir(frontend_dir):
-        logger.warning(f"Frontend directory not found at '{frontend_dir}'. Skipping auto-start.")
+    if os.path.exists(dist_dir):
+        logger.info("✅ Production static frontend dist found. Native FastAPI Port 8000 serving active.")
         return
 
     npm_cmd = "npm.cmd" if os.name == "nt" else "npm"
