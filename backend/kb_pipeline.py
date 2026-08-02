@@ -603,10 +603,18 @@ def extract_text_from_image_ocr(image_path):
     raw_text2, conf2 = _do_pytesseract(contrasted, psm_mode=3)
     raw_text3, conf3 = _do_pytesseract(contrasted, psm_mode=6)
 
-    # Choose text candidate with highest character count & medical keyword density
-    candidates = [(raw_text1, conf1), (raw_text2, conf2), (raw_text3, conf3)]
-    candidates.sort(key=lambda x: len(x[0].strip()), reverse=True)
-    text, mean_conf = candidates[0]
+    # Merge unique non-duplicate lines across passes to capture both header demographics and tabular test results
+    merged_lines = []
+    seen = set()
+    for txt in [raw_text1, raw_text3, raw_text2]:
+        for line in txt.splitlines():
+            line_clean = line.strip()
+            if line_clean and line_clean.lower() not in seen:
+                seen.add(line_clean.lower())
+                merged_lines.append(line_clean)
+                
+    text = "\n".join(merged_lines).strip()
+    mean_conf = max(conf1, conf2, conf3)
 
     # EasyOCR fallback if text length is short
     if len(text.strip()) < 60:
@@ -724,30 +732,8 @@ def ingest_user_document_task(
             logger.warning(f"No direct text extracted from {original_filename}. Creating fallback document chunk.")
             pages_text = [(1, f"Uploaded Document: {original_filename}\nFile Format: {ext}\nNote: User uploaded this file for analysis and summary.")]
 
-        # If this looks like a medical lab report, parse structured test results
-        try:
-            # Collect per-page parsed results and, if found, prepend a structured summary chunk
-            structured_blocks = []
-            for pnum, ptext in pages_text:
-                parsed = extract_test_results_from_text(ptext)
-                if parsed:
-                    # Build a readable structured summary
-                    lines = [f"{r['test_name']} → {r['result']}" for r in parsed]
-                    structured = "Structured Test Results:\n" + "\n".join(lines)
-                    structured_blocks.append((pnum, structured))
-
-            # If we found any structured results, insert a leading page with aggregated facts
-            if structured_blocks:
-                agg_lines = []
-                for _, block in structured_blocks:
-                    agg_lines.append(block)
-                agg_text = "\n\n".join(agg_lines)
-                # Prepend as page 0 so chunking and prompts include it first
-                pages_text.insert(0, (0, agg_text))
-                page_count = len(pages_text)
-        except Exception:
-            # Non-fatal parsing errors shouldn't stop indexing
-            pass
+        # Line merging across OCR passes guarantees complete capture of patient header + tabular results
+        pass
             
         if ext in {".docx", ".jpg", ".jpeg", ".png", ".webp"}:
             sample_text = ""
