@@ -288,7 +288,8 @@ export default function ChatWorkspace({
     const activeConvId = await ensureConversationExists(currentInput || "Document Question");
     if (!activeConvId) return;
 
-    // Clear attached file now that we are sending the message
+    const sentFileName = attachedFile ? attachedFile.name : null;
+    // Clear attached file input pill now that message is being dispatched
     if (attachedFile) {
       setAttachedFile(null);
       setUploadStep(0);
@@ -303,8 +304,9 @@ export default function ChatWorkspace({
       }
     }
 
-    // Add user message
-    setMessages((prev) => [...prev, { role: "user", content: currentInput }]);
+    // Add user message with attached file badge if present
+    const userMessageText = sentFileName ? `[📄 Attached: ${sentFileName}]\n${currentInput}` : currentInput;
+    setMessages((prev) => [...prev, { role: "user", content: userMessageText }]);
     setIsStreaming(true);
     setCurrentStreamText("");
     setStreamCitations([]);

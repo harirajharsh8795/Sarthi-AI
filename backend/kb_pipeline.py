@@ -734,7 +734,8 @@ def ingest_user_document_task(
         page_count = len(pages_text)
         has_text = any(t.strip() for _, t in pages_text)
         if not has_text:
-            raise ValueError("No readable text found in document")
+            logger.warning(f"No direct text extracted from {original_filename}. Creating fallback document chunk.")
+            pages_text = [(1, f"Uploaded Document: {original_filename}\nFile Format: {ext}\nNote: User uploaded this file for analysis and summary.")]
 
         # If this looks like a medical lab report, parse structured test results
         try:

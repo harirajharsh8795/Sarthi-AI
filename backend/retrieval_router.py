@@ -226,10 +226,13 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     """
     session_valid = check_session_exists(session_id)
     
-    # Check if the ACTIVE conversation has uploaded documents
+    # Check if the ACTIVE conversation or session has uploaded documents
     active_conv_docs = []
-    if session_valid and conversation_id:
-        active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
+    if session_valid:
+        if conversation_id:
+            active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
+        if not active_conv_docs:
+            active_conv_docs = session_manager.get_session_documents(session_id)
 
     # 1. WHOLE-DOCUMENT SUMMARY INTENT:
     # If user explicitly requests a full document summary (e.g. "explain my report", "summary do"),
@@ -275,10 +278,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     
     if session_valid and active_conv_docs:
         user_collection = kb_pipeline.get_user_docs_collection()
-        where_conditions = [{"session_id": session_id}]
-        if conversation_id:
-            where_conditions.append({"conversation_id": conversation_id})
-        where_filter = {"$and": where_conditions} if len(where_conditions) > 1 else where_conditions[0]
+        where_filter = {"session_id": session_id}
 
         results_user = user_collection.query(
             query_embeddings=[query_embedding],
