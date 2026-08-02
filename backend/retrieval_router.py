@@ -226,22 +226,16 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     """
     session_valid = check_session_exists(session_id)
     
-    # Check if the ACTIVE conversation or session has uploaded documents
+    # Check if the ACTIVE conversation specifically has uploaded documents
     active_conv_docs = []
-    if session_valid:
-        if conversation_id:
-            active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
-        if not active_conv_docs:
-            active_conv_docs = session_manager.get_session_documents(session_id)
+    if session_valid and conversation_id and conversation_id != "new":
+        active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
 
     # 1. WHOLE-DOCUMENT SUMMARY INTENT:
     # If user explicitly requests a full document summary (e.g. "explain my report", "summary do"),
     # force sequential retrieval across ALL pages (n=25 chunks) in page order.
-    if session_valid and (active_conv_docs or is_document_about_query(query)) and is_whole_document_summary_query(query):
+    if session_valid and active_conv_docs and is_whole_document_summary_query(query):
         doc_ids_to_use = [d["id"] for d in active_conv_docs if d.get("id")]
-        if not doc_ids_to_use:
-            doc_ids_to_use = _get_latest_session_document_ids(session_id, conversation_id=conversation_id)
-
         if doc_ids_to_use:
             forced_chunks = force_retrieve_user_doc_chunks(
                 session_id,
@@ -278,7 +272,10 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     
     if session_valid and active_conv_docs:
         user_collection = kb_pipeline.get_user_docs_collection()
-        where_filter = {"session_id": session_id}
+        where_conditions = [{"session_id": session_id}]
+        if conversation_id and conversation_id != "new":
+            where_conditions.append({"conversation_id": conversation_id})
+        where_filter = {"$and": where_conditions} if len(where_conditions) > 1 else where_conditions[0]
 
         results_user = user_collection.query(
             query_embeddings=[query_embedding],
