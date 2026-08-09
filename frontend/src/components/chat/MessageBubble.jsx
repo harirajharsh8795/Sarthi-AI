@@ -222,7 +222,7 @@ export default function MessageBubble({
           <div>
             {/* Bubble Content */}
             {isUser ? (
-              <p className="whitespace-pre-wrap text-xs leading-relaxed">{message.content}</p>
+              <p className="whitespace-pre-wrap text-[15px] font-medium leading-relaxed">{message.content}</p>
             ) : (
               <div className="space-y-2">
                 <MarkdownRenderer content={message.content} />
