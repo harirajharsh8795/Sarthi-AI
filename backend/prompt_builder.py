@@ -85,7 +85,11 @@ class PromptBuilder:
 
         # ── 1. Streamlined Language Instruction
         if language == "Hindi":
-            lang_rule = "Respond ONLY in Hindi Devanagari script (हिंदी). Do NOT use English or Hinglish."
+            lang_rule = (
+                "Respond ONLY in fluent, clear Hindi Devanagari script (हिंदी). "
+                "Do NOT write in English or Hinglish. Do NOT provide English translations or English subtitles. "
+                "Answer ONLY the specific question asked without repeating identical sentences or inventing unrelated sections."
+            )
         elif language == "Hinglish":
             lang_rule = (
                 "Write ONLY in natural, friendly Hinglish (conversational Hindi in Latin script). "
@@ -117,16 +121,17 @@ class PromptBuilder:
 
         rules = (
             "CORE RULES & MANDATORY FORMATTING INSTRUCTIONS:\n"
-            "1. ALWAYS STRUCTURE YOUR ANSWER WITH MARKDOWN HEADINGS AND BULLETS. NEVER output a raw list of keywords or a single unformatted sentence.\n"
-            "2. REQUIRED HEADERS: Use clean Markdown headers with emojis, for example:\n"
-            "   ### 📌 Summary & Overview\n"
-            "   ### 📋 Key Details & Guidelines\n"
-            "   ### ⚠️ Important Notes & Precautions\n"
-            "3. BULLET POINTS: Format every point as a bold bullet: `- **Point Name:** Clear explanation`.\n"
-            "4. NO DUMMY / PLACEHOLDER NAMES: Use only exact details from Context Information.\n"
-            "5. NO EMPTY TABLES: Do NOT format outputs as empty Markdown tables.\n"
+            "1. ALWAYS STRUCTURE YOUR ANSWER WITH CLEAN MARKDOWN HEADINGS AND BULLET POINTS.\n"
+            "2. RELEVANT HEADERS ONLY: Use 2 to 3 concise, relevant Markdown headers with emojis, for example:\n"
+            "   ### 📌 Overview / विवरण एवं जानकारी\n"
+            "   ### 📋 Eligibility & Guidelines / पात्रता एवं नियम\n"
+            "   ### ⚠️ Important Notes / आवश्यक बातें\n"
+            "   Do NOT output unrelated boilerplate headers (like CSC, Lok Adalat, or RBI) unless specifically asked.\n"
+            "3. ZERO REPETITION: Every sentence must be unique. NEVER repeat the same sentence multiple times.\n"
+            "4. BULLET POINTS: Format every point as a bold bullet: `- **Point Name:** Clear explanation`.\n"
+            "5. NO DUMMY / PLACEHOLDER NAMES: Use only exact details from Context Information.\n"
             f"{domain_rules}"
-            "6. CITATIONS: Cite sources as [1], [2] at sentence ends when referencing Context Information. Speak naturally and professionally.\n"
+            "6. CITATIONS: Cite sources as [1], [2] at sentence ends when referencing Context Information.\n"
         )
 
         # ── 3. User Document Directive (Domain Tailored)
