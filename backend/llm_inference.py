@@ -243,17 +243,17 @@ def _generate_answer_stream_inner(
     # Sanitize user query string (strip trailing slashes that break string formatting)
     query = query.strip().rstrip('\\').rstrip('/').strip()
 
-    # 8. Local LLM streaming — keep_alive prevents model unloading between requests
+    # 8. Local LLM streaming — keep_alive keeps model pre-warmed in GPU RAM
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": True,
-        "keep_alive": "30m",
+        "keep_alive": "60m",
         "options": {
             "num_ctx": NUM_CTX,
             "temperature": 0.1,
             "repeat_penalty": 1.15,
-            "num_predict": 1536,
+            "num_predict": 1024,
             "num_thread": 4
         }
     }

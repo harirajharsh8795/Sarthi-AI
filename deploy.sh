@@ -58,10 +58,10 @@ else
     echo "  ✅ Model llama3.2:1b is available."
 fi
 
-# ─── 4. PRE-WARM OLLAMA MODEL (CRITICAL: prevents 500 errors) ──
-echo "[4/8] Pre-warming LLM model into GPU memory (keep_alive=30m)..."
+# ─── 4. PRE-WARM OLLAMA MODEL (CRITICAL: eliminates cold-start latency) ──
+echo "[4/8] Pre-warming LLM model into GPU memory (keep_alive=60m)..."
 WARMUP_RESULT=$(curl -sf -X POST "${OLLAMA_HOST}/api/generate" \
-    -d '{"model":"llama3.2:1b","prompt":"Hello","stream":false,"keep_alive":"30m"}' \
+    -d '{"model":"llama3.2:1b","prompt":"Summarize: Right to Information Act 2005 empowers Indian citizens. Answer:","stream":false,"keep_alive":"60m"}' \
     --max-time 60 2>/dev/null || echo "FAIL")
 
 if echo "$WARMUP_RESULT" | grep -q "response"; then

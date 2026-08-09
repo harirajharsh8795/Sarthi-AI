@@ -997,6 +997,14 @@ def index_all_local_knowledge_base():
     logger.info(f"Indexing local knowledge base files from: {kb_root}")
     
     collection = services.chroma_manager.get_collection("knowledge_base")
+    try:
+        existing_count = collection.count()
+        if existing_count > 500:
+            logger.info(f"Knowledge base collection already contains {existing_count} indexed chunks. Skipping full startup re-indexing for instant query readiness.")
+            return existing_count
+    except Exception as e:
+        logger.warning(f"Could not check existing collection count: {e}")
+        
     model = get_embedding_model()
     
     total_indexed_files = 0
