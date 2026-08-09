@@ -399,7 +399,7 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     for c in merged_chunks:
         c["similarity_score"] = min(max(float(c.get("similarity_score", 0.0)), 0.0), 1.0)
     
-    final_chunks = merged_chunks[:8]
+    final_chunks = merged_chunks[:4]
     
     user_docs_used = sum(1 for c in final_chunks if c.get("collection") == "user_docs")
     kb_used = sum(1 for c in final_chunks if c.get("collection") == "knowledge_base")

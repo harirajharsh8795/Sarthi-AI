@@ -151,9 +151,9 @@ def _generate_answer_stream_inner(
     user_doc_chunks_used = sum(1 for c in context_chunks if c["collection"] == "user_docs")
     knowledge_base_chunks_used = sum(1 for c in context_chunks if c["collection"] == "knowledge_base")
     
-    # Limit context chunks to top 6 for grounded evidence
+    # Limit context chunks to top 4 for ultra-fast TTFT latency
     if context_chunks:
-        context_chunks = context_chunks[:6]
+        context_chunks = context_chunks[:4]
     else:
         context_chunks = []
 
@@ -223,7 +223,8 @@ def _generate_answer_stream_inner(
         "options": {
             "num_ctx": NUM_CTX,
             "temperature": 0.1,
-            "repeat_penalty": 1.15
+            "repeat_penalty": 1.15,
+            "num_thread": 4
         }
     }
 
@@ -279,8 +280,8 @@ def _generate_answer_stream_inner(
                 total_tokens += 1
                 token_buffer += token
                 
-                # Stream in fast word/phrase chunks (>= 12 chars or sentence/line breaks) to prevent UI render lag
-                if len(token_buffer) >= 12 or any(c in token_buffer for c in ['\n', '.', '!', '?', ';']):
+                # Stream in fast word/phrase chunks (>= 6 chars or space/line breaks) for instant TTFT on screen
+                if len(token_buffer) >= 6 or any(c in token_buffer for c in ['\n', '.', '!', '?', ';', ' ']):
                     yield {
                         "type": "token",
                         "data": {"token": token_buffer}
