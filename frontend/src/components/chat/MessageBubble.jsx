@@ -80,6 +80,23 @@ export default function MessageBubble({
     };
   };
 
+  const speakNative = (cleanText, targetLang) => {
+    if (!('speechSynthesis' in window)) return false;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(cleanText.slice(0, 300));
+      utterance.lang = targetLang === "Hindi" ? "hi-IN" : "en-US";
+      utterance.rate = 1.0;
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+      window.speechSynthesis.speak(utterance);
+      setIsPlaying(true);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const handleSpeak = async () => {
     if (isPlaying) {
       if (audioRef.current) {
@@ -89,26 +106,36 @@ export default function MessageBubble({
         }
         audioRef.current = null;
       }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
       setIsPlaying(false);
       return;
     }
 
     setSpeakingLoading(true);
+    const targetLang = message.response_language || (language === "hi" ? "Hindi" : "English");
+    const cleanText = (message.content || "").replace(/\[\d+\]/g, "").replace(/[#\*_`~]/g, "").trim();
+
     try {
       const response = await fetch(`${API_BASE}/api/voice/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: message.content.replace(/\[\d+\]/g, ""), // strip inline citations
-          language: message.response_language || (language === "hi" ? "Hindi" : "English"),
+          text: cleanText,
+          language: targetLang,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to synthesize speech");
+      if (!response.ok || response.status === 204) {
+        throw new Error("Server TTS fallback triggered");
       }
 
       const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error("Empty audio payload");
+      }
+      
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
@@ -118,11 +145,15 @@ export default function MessageBubble({
         audioRef.current = null;
         URL.revokeObjectURL(audioUrl);
       };
+      audio.onerror = () => {
+        speakNative(cleanText, targetLang);
+      };
       
       await audio.play();
       setIsPlaying(true);
     } catch (err) {
-      console.error("TTS playback error:", err);
+      console.warn("Server TTS fallback to Web Speech API:", err);
+      speakNative(cleanText, targetLang);
     } finally {
       setSpeakingLoading(false);
     }

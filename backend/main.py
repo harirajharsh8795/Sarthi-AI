@@ -671,45 +671,50 @@ async def transcribe_audio(audio: UploadFile = File(...), lang: Optional[str] = 
 @v1_router.post("/voice/speak")
 async def speak_text(request: SpeakRequest, background_tasks: BackgroundTasks):
     os.makedirs(settings.TEMP_DIR, exist_ok=True)
-    temp_file = tempfile.NamedTemporaryFile(suffix=".wav", dir=settings.TEMP_DIR, delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".mp3", dir=settings.TEMP_DIR, delete=False)
     temp_file_path = temp_file.name
     temp_file.close()
     
     try:
-        loop = asyncio.get_event_loop()
-        def run_pyttsx3():
-            engine = pyttsx3.init()
-            try:
-                engine.setProperty('rate', 150)
-                if request.language == "Hindi":
-                    voices = engine.getProperty('voices')
-                    hindi_voice = None
-                    for voice in voices:
-                        name_str = str(voice.name).lower()
-                        id_str = str(voice.id).lower()
-                        lang_str = str(getattr(voice, 'languages', [])).lower()
-                        if "hindi" in name_str or "hi_in" in id_str or "hindi" in lang_str:
-                            hindi_voice = voice.id
-                            break
-                    if hindi_voice:
-                        engine.setProperty('voice', hindi_voice)
-                engine.save_to_file(request.text, temp_file_path)
-                engine.runAndWait()
-            finally:
-                del engine
+        # Sanitize text for clean speech: strip markdown headers, bold, bullets, and citations
+        clean_txt = re.sub(r'\[\d+\]', '', request.text or '')
+        clean_txt = re.sub(r'[#\*_`~]', '', clean_txt)
+        clean_txt = re.sub(r'\s+', ' ', clean_txt).strip()
+        
+        # Truncate to first 350 chars (first 2-3 sentences) for sub-0.3s generation speed
+        if len(clean_txt) > 350:
+            cut_idx = max(clean_txt[:350].rfind('.'), clean_txt[:350].rfind('।'), clean_txt[:350].rfind('\n'))
+            if cut_idx > 150:
+                clean_txt = clean_txt[:cut_idx + 1]
+            else:
+                clean_txt = clean_txt[:350]
+                
+        if not clean_txt:
+            clean_txt = "No text provided."
 
-        await loop.run_in_executor(None, run_pyttsx3)
+        lang_code = "hi" if request.language == "Hindi" or re.search(r'[\u0900-\u097f]', clean_txt) else "en"
+
+        loop = asyncio.get_event_loop()
+        def synthesize_gtts():
+            from gtts import gTTS
+            tts = gTTS(text=clean_txt, lang=lang_code, slow=False)
+            tts.save(temp_file_path)
+
+        await loop.run_in_executor(None, synthesize_gtts)
         
         if not os.path.exists(temp_file_path) or os.path.getsize(temp_file_path) == 0:
-            raise SaarthiError("SAARTHI_TTS_FAILED", "Pyttsx3 generated file is empty.", 500)
+            return Response(status_code=204)
             
         background_tasks.add_task(lambda path: os.path.exists(path) and os.remove(path), temp_file_path)
-        return FileResponse(temp_file_path, media_type="audio/wav")
+        return FileResponse(temp_file_path, media_type="audio/mpeg")
     except Exception as e:
-        logger.error(f"Speak synthesis failed: {e}")
+        logger.error(f"TTS synthesis failed: {e}")
         if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
-        raise SaarthiError("SAARTHI_TTS_FAILED", "Failed to synthesize speech.")
+            try:
+                os.remove(temp_file_path)
+            except Exception:
+                pass
+        return Response(status_code=204)
 
 @v1_router.post("/conversations")
 def create_new_conversation(req: ConversationCreate):
