@@ -229,7 +229,8 @@ def _generate_answer_stream_inner(
             for attempt in range(3):
                 wait = 2 ** attempt  # 1s, 2s, 4s
                 time.sleep(wait)
-                compact_context = compressed_chunks[0]['content'][:500] if compressed_chunks else ""
+                first_c = compressed_chunks[0] if compressed_chunks else {}
+                compact_context = (first_c.get('text') or first_c.get('content') or '')[:500]
                 retry_payload = {
                     "model": MODEL_NAME,
                     "prompt": f"Question: {query}\n\nRelevant Info: {compact_context}\n\nAnswer in clear Hindi/Hinglish:",
@@ -249,7 +250,10 @@ def _generate_answer_stream_inner(
                 logger.error(f"Ollama error after retries ({response.status_code}): {response.text[:200]}")
                 # Grounded fallback if Ollama runner process crashed under memory pressure
                 if compressed_chunks:
-                    fallback_text = f"**{compressed_chunks[0].get('title', 'Direct Guidance')}**\n\n{compressed_chunks[0].get('content', '')[:600]}\n\n[1]"
+                    c = compressed_chunks[0]
+                    c_title = c.get('source') or c.get('filename') or c.get('title') or 'Government Guidelines'
+                    c_text = c.get('text') or c.get('content') or c.get('page_content') or ''
+                    fallback_text = f"**{c_title}**\n\n{c_text[:700]}\n\n[1]"
                 else:
                     fallback_text = "Aapka query receive ho gaya hai. Kripya apna prashna thoda short karke poochein."
                 full_text = fallback_text
@@ -286,7 +290,10 @@ def _generate_answer_stream_inner(
         import traceback
         logger.error(f"Ollama inference failed: {e}\n{traceback.format_exc()}")
         if compressed_chunks and not full_text:
-            fallback_text = f"**{compressed_chunks[0].get('title', 'Knowledge Source')}**\n\n{compressed_chunks[0].get('content', '')[:600]}\n\n[1]"
+            c = compressed_chunks[0]
+            c_title = c.get('source') or c.get('filename') or c.get('title') or 'Government Guidelines'
+            c_text = c.get('text') or c.get('content') or c.get('page_content') or ''
+            fallback_text = f"**{c_title}**\n\n{c_text[:700]}\n\n[1]"
             yield {"type": "token", "data": {"token": fallback_text}}
         else:
             yield {"type": "error", "data": {"message": f"Inference error ({type(e).__name__}): {str(e)}"}}
