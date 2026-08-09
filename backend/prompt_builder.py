@@ -185,8 +185,18 @@ class PromptBuilder:
         if chunks:
             context_block = "Context Information:\n"
             for idx, c in enumerate(chunks, 1):
-                chunk_text = c.get('text') or c.get('content') or c.get('page_content') or ''
-                context_block += f"Fact [{idx}]: {chunk_text.strip()}\n\n"
+                raw_text = c.get('text') or c.get('content') or c.get('page_content') or ''
+                # Strip YAML frontmatter headers (Title:, Keywords:, domain:) to prevent LLM echoing raw file metadata
+                clean_lines = []
+                for line in raw_text.split('\n'):
+                    l_strip = line.strip()
+                    if re.match(r'^(?:title|keywords|document_id|domain|topic|category|intent|language)\s*:', l_strip, re.IGNORECASE):
+                        continue
+                    if l_strip == '---':
+                        continue
+                    clean_lines.append(line)
+                cleaned_text = '\n'.join(clean_lines).strip()
+                context_block += f"Fact [{idx}]: {cleaned_text}\n\n"
         else:
             context_block = (
                 "Context Information: No specific document/KB match found for this question.\n"

@@ -6,17 +6,17 @@ export default function MarkdownRenderer({ content }) {
   if (!content) return null;
 
   return (
-    <div className="markdown-prose w-full text-[16px] leading-[1.7] font-normal" style={{ color: "var(--text-primary)" }}>
+    <div className="markdown-prose w-full text-[14.5px] leading-[1.65] font-normal" style={{ color: "var(--text-primary)" }}>
       <ReactMarkdown 
         remarkPlugins={[remarkGfm]}
         components={{
-          h1: ({node, ...props}) => <h1 className="text-2xl font-extrabold mt-6 mb-3" style={{ color: "var(--text-primary)" }} {...props} />,
-          h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-5 mb-2.5" style={{ color: "var(--text-primary)" }} {...props} />,
-          h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-4 mb-2" style={{ color: "var(--text-primary)" }} {...props} />,
-          p: ({node, ...props}) => <p className="mb-3 leading-[1.7] text-[16px]" style={{ color: "var(--text-primary)" }} {...props} />,
-          ul: ({node, ...props}) => <ul className="ml-5 list-disc pl-1 mb-3 space-y-2 text-[16px]" style={{ color: "var(--text-primary)" }} {...props} />,
-          ol: ({node, ...props}) => <ol className="ml-6 list-decimal pl-1 mb-3 space-y-2 text-[16px]" style={{ color: "var(--text-primary)" }} {...props} />,
-          li: ({node, ...props}) => <li className="leading-[1.7]" style={{ color: "var(--text-primary)" }} {...props} />,
+          h1: ({node, ...props}) => <h1 className="text-[19px] font-extrabold mt-5 mb-2.5" style={{ color: "var(--text-primary)" }} {...props} />,
+          h2: ({node, ...props}) => <h2 className="text-[17px] font-bold mt-4 mb-2" style={{ color: "var(--text-primary)" }} {...props} />,
+          h3: ({node, ...props}) => <h3 className="text-[15.5px] font-bold mt-3.5 mb-1.5" style={{ color: "var(--text-primary)" }} {...props} />,
+          p: ({node, ...props}) => <p className="mb-2.5 leading-[1.65] text-[14.5px]" style={{ color: "var(--text-primary)" }} {...props} />,
+          ul: ({node, ...props}) => <ul className="ml-5 list-disc pl-1 mb-2.5 space-y-1.5 text-[14.5px]" style={{ color: "var(--text-primary)" }} {...props} />,
+          ol: ({node, ...props}) => <ol className="ml-6 list-decimal pl-1 mb-2.5 space-y-1.5 text-[14.5px]" style={{ color: "var(--text-primary)" }} {...props} />,
+          li: ({node, ...props}) => <li className="leading-[1.65] text-[14.5px]" style={{ color: "var(--text-primary)" }} {...props} />,
           strong: ({node, ...props}) => <strong className="font-bold text-white" {...props} />,
           em: ({node, ...props}) => <em className="italic" {...props} />,
           blockquote: ({node, ...props}) => (
