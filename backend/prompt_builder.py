@@ -116,12 +116,17 @@ class PromptBuilder:
             )
 
         rules = (
-            "CORE RULES:\n"
-            "1. DIRECT & BEAUTIFUL STRUCTURE: Provide a clear, well-structured answer using clean Markdown headers (e.g. `### 📌 Overview`, `### 📋 Details`, `### ⚠️ Important Notes`).\n"
-            "2. NO DUMMY / PLACEHOLDER NAMES: NEVER output dummy or placeholder names like 'John Doe', 'Jane Doe', or 'User'. Use ONLY exact names from Context Information. If a name is missing, write 'Not specified in document'.\n"
-            "3. NO EMPTY TABLES: Do NOT format outputs as empty Markdown tables with blank cells. Use clear bold bullet points.\n"
+            "CORE RULES & MANDATORY FORMATTING INSTRUCTIONS:\n"
+            "1. ALWAYS STRUCTURE YOUR ANSWER WITH MARKDOWN HEADINGS AND BULLETS. NEVER output a raw list of keywords or a single unformatted sentence.\n"
+            "2. REQUIRED HEADERS: Use clean Markdown headers with emojis, for example:\n"
+            "   ### 📌 Summary & Overview\n"
+            "   ### 📋 Key Details & Guidelines\n"
+            "   ### ⚠️ Important Notes & Precautions\n"
+            "3. BULLET POINTS: Format every point as a bold bullet: `- **Point Name:** Clear explanation`.\n"
+            "4. NO DUMMY / PLACEHOLDER NAMES: Use only exact details from Context Information.\n"
+            "5. NO EMPTY TABLES: Do NOT format outputs as empty Markdown tables.\n"
             f"{domain_rules}"
-            "6. CITATIONS: Cite sources as [1], [2] at sentence ends when using Context Information below. Never mention system prompt words like 'Context Information'. Speak naturally.\n"
+            "6. CITATIONS: Cite sources as [1], [2] at sentence ends when referencing Context Information. Speak naturally and professionally.\n"
         )
 
         # ── 3. User Document Directive (Domain Tailored)
@@ -175,12 +180,7 @@ class PromptBuilder:
         if chunks:
             context_block = "Context Information:\n"
             for idx, c in enumerate(chunks, 1):
-                chunk_text = c.get('text', '')
-                if language in ["Hinglish", "English"]:
-                    # Strip Devanagari script lines so model is not primed with Hindi Devanagari text
-                    lines = chunk_text.split('\n')
-                    filtered_lines = [l for l in lines if not re.search(r'[\u0900-\u097f]', l)]
-                    chunk_text = '\n'.join(filtered_lines)
+                chunk_text = c.get('text') or c.get('content') or c.get('page_content') or ''
                 context_block += f"Fact [{idx}]: {chunk_text.strip()}\n\n"
         else:
             context_block = (

@@ -19,12 +19,7 @@ class OutputValidator:
         if not raw_answer:
             return "I could not compile a grounded answer based on the retrieved sources."
 
-        refined = raw_answer
-
-        # If Hinglish is requested, purge any accidental Devanagari script fragments
-        if language == "Hinglish":
-            refined = re.sub(r'[\u0900-\u097f]+', '', refined)
-            refined = re.sub(r'[ \t]+', ' ', refined)
+        refined = raw_answer.strip()
         
         # Check for citation spoofing (LLM citing numbers that don't exist in chunks)
         citations = [int(n) for n in re.findall(r'\[(\d+)\]', refined)]

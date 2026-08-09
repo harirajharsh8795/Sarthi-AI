@@ -212,7 +212,8 @@ def _generate_answer_stream_inner(
         "keep_alive": "30m",
         "options": {
             "num_ctx": NUM_CTX,
-            "temperature": 0.2
+            "temperature": 0.1,
+            "repeat_penalty": 1.15
         }
     }
 
