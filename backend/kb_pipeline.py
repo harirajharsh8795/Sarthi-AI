@@ -539,20 +539,6 @@ def extract_text_from_image_ocr(image_path):
 
     def _do_pytesseract(image_obj, psm_mode=3, lang="eng+hin"):
         try:
-            direct_text = pytesseract.image_to_string(
-                image_obj, lang=lang,
-                config=f"--oem 3 --psm {psm_mode}"
-            ).strip()
-        except Exception:
-            try:
-                direct_text = pytesseract.image_to_string(
-                    image_obj, lang="eng",
-                    config=f"--oem 3 --psm {psm_mode}"
-                ).strip()
-            except Exception:
-                direct_text = ""
-
-        try:
             data = pytesseract.image_to_data(
                 image_obj, lang=lang,
                 config=f"--oem 3 --psm {psm_mode}",
@@ -570,9 +556,16 @@ def extract_text_from_image_ocr(image_path):
 
         lines = {}
         confidences = []
-        for i in range(len(data.get("text", []))):
-            word = (data.get("text", [""])[i] or "").strip()
-            conf_raw = data.get("conf", ["-1"])[i]
+        texts = data.get("text", [])
+        confs = data.get("conf", [])
+        page_nums = data.get("page_num", [])
+        block_nums = data.get("block_num", [])
+        par_nums = data.get("par_num", [])
+        line_nums = data.get("line_num", [])
+
+        for i in range(len(texts)):
+            word = (texts[i] or "").strip()
+            conf_raw = confs[i] if i < len(confs) else "-1"
             try:
                 conf = float(conf_raw)
             except Exception:
@@ -582,10 +575,10 @@ def extract_text_from_image_ocr(image_path):
                 continue
 
             line_key = (
-                data.get("page_num", [1])[i],
-                data.get("block_num", [0])[i],
-                data.get("par_num", [0])[i],
-                data.get("line_num", [0])[i],
+                page_nums[i] if i < len(page_nums) else 1,
+                block_nums[i] if i < len(block_nums) else 0,
+                par_nums[i] if i < len(par_nums) else 0,
+                line_nums[i] if i < len(line_nums) else 0,
             )
             lines.setdefault(line_key, []).append(word)
             if conf > 0:
@@ -594,9 +587,7 @@ def extract_text_from_image_ocr(image_path):
         sorted_keys = sorted(lines.keys())
         data_text = "\n".join(" ".join(lines[k]) for k in sorted_keys).strip()
         mean_conf_out = sum(confidences) / len(confidences) if confidences else 70.0
-        
-        best_text = direct_text if len(direct_text) > len(data_text) else data_text
-        return best_text, mean_conf_out
+        return data_text, mean_conf_out
 
     # Multi-pass OCR: Pass 1 auto layout, Pass 2 contrast auto, Pass 3 single block, Pass 4 sparse text (header boxes), Pass 5 columns
     raw_text1, conf1 = _do_pytesseract(img, psm_mode=3)
@@ -681,32 +672,43 @@ def ingest_user_document_task(
         start_extract = time.perf_counter()
         if ext == ".pdf":
             doc = fitz.open(file_path)
-            pages_text = []
-            confidences = []
-            
+            raw_pages = []
+            total_direct_text_len = 0
             for i, page in enumerate(doc):
-                text = page.get_text().strip()
-                # Per-page OCR fallback if direct text extraction yields less than 30 characters
-                if len(text) < 30:
-                    pix = page.get_pixmap(dpi=150)
-                    temp_img_path = f"{file_path}_page_{i}.png"
-                    pix.save(temp_img_path)
-                    try:
-                        ocr_text, conf = extract_text_from_image_ocr(temp_img_path)
-                        from ocr_sanitizer import ocr_sanitizer
-                        ocr_text = ocr_sanitizer.sanitize_ocr_text(ocr_text)
-                        if len(ocr_text.strip()) > len(text):
-                            text = ocr_text.strip()
-                            ocr_used = True
-                            if conf > 0:
-                                confidences.append(conf)
-                    finally:
-                        if os.path.exists(temp_img_path):
-                            try:
-                                os.remove(temp_img_path)
-                            except Exception:
-                                pass
-                pages_text.append((i + 1, text))
+                txt = page.get_text().strip()
+                raw_pages.append((i + 1, txt))
+                total_direct_text_len += len(txt)
+
+            # If PDF has embedded text layer (total text >= 50 chars), use fast direct text extraction
+            if total_direct_text_len >= 50:
+                pages_text = raw_pages
+            else:
+                # Scanned image PDF: perform OCR fallback on image pages
+                pages_text = []
+                confidences = []
+                for page_num, text in raw_pages:
+                    if len(text) < 30:
+                        page = doc[page_num - 1]
+                        pix = page.get_pixmap(dpi=150)
+                        temp_img_path = f"{file_path}_page_{page_num}.png"
+                        pix.save(temp_img_path)
+                        try:
+                            ocr_text, conf = extract_text_from_image_ocr(temp_img_path)
+                            from ocr_sanitizer import ocr_sanitizer
+                            ocr_text = ocr_sanitizer.sanitize_ocr_text(ocr_text)
+                            if len(ocr_text.strip()) > len(text):
+                                text = ocr_text.strip()
+                                ocr_used = True
+                                if conf > 0:
+                                    confidences.append(conf)
+                        finally:
+                            if os.path.exists(temp_img_path):
+                                try:
+                                    os.remove(temp_img_path)
+                                except Exception:
+                                    pass
+                    pages_text.append((page_num, text))
+
             doc.close()
 
             # Set average OCR confidence if OCR was triggered for any page
