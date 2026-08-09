@@ -102,61 +102,77 @@ def extract_test_results_from_text(text: str) -> List[Dict[str, str]]:
 def extract_demographics_from_text(text: str) -> Dict[str, str]:
     """
     Extracts key patient demographics (Patient Name, Hospital/Lab, Ref Doctor, Age, Sex)
-    from OCR'd text using robust multi-pattern regex matching.
+    from OCR'd text using robust line-by-line regex matching.
     """
     if not text:
         return {}
 
     demographics = {}
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
 
     # 1. Patient Name Regexes
     name_patterns = [
-        r"(?:Patient\s*Name|Pt\.?\s*Name|Patient|Name of Patient|Patient's\s*Name)\s*[:\-]?\s*([A-Za-z\.\s]{2,45})",
-        r"(?:Mrs\.|Mr\.|Ms\.|Master|Baby|Dr\.|Smt\.|Shri|Sh\.)\s+([A-Za-z\s]{2,40})",
-        r"\bName\s*[:\-]\s*([A-Za-z\.\s]{2,45})"
+        r"(?:Patient\s*Name|Pt\.?\s*Name|Patient|Name of Patient|Patient's\s*Name)\s*[:\-]?\s*([A-Za-z\.\s]{2,40})",
+        r"(?:Mrs\.|Mr\.|Ms\.|Master|Baby|Dr\.|Smt\.|Shri|Sh\.)\s+([A-Za-z\s]{2,35})",
+        r"\bName\s*[:\-]\s*([A-Za-z\.\s]{2,40})"
     ]
-    for pat in name_patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            val = m.group(1).strip(' .:-\t\r\n')
-            if len(val) >= 2 and val.lower() not in ("not specified", "patient name", "unknown", "test", "name", "report", "gender", "age"):
-                demographics["patient_name"] = val
-                break
+    for ln in lines:
+        for pat in name_patterns:
+            m = re.search(pat, ln, re.IGNORECASE)
+            if m:
+                val = m.group(0).strip(' .:-\t\r\n')
+                if "name" in val.lower() and ":" in val:
+                    val = val.split(":", 1)[1].strip()
+                elif "name" in val.lower() and "-" in val:
+                    val = val.split("-", 1)[1].strip()
+                val = re.sub(r"\s+(?:Bill|MR|Reg|Age|Sex|Date|Ward|No|ID|Sample|Type|Reported|Collected).*", "", val, flags=re.IGNORECASE).strip()
+                if len(val) >= 3 and val.lower() not in ("not specified", "patient name", "unknown", "test", "name", "report", "gender", "age"):
+                    demographics["patient_name"] = val
+                    break
+        if "patient_name" in demographics:
+            break
 
     # 2. Hospital / Lab Name Regexes
     hosp_patterns = [
         r"(HOLY\s*FAMILY\s*HOSPITAL)",
-        r"(?:Hospital|Lab|Diagnostic|Pathology|Clinic|Center|Centre|Laboratory)\s*[:\-]?\s*([A-Za-z0-9\.\s&]{3,50})",
-        r"([A-Za-z\s&]{3,40}(?:Hospital|Diagnostic|Pathology|Lab|Clinic|Center|Centre|Laboratory))"
+        r"(INAMDAR\s*MULTISPECIALITY\s*HOSPITAL)",
+        r"([A-Za-z0-9\s&]{3,45}(?:Hospital|Diagnostic|Pathology|Lab|Clinic|Center|Centre|Laboratory))",
+        r"(?:Hospital|Lab|Diagnostic|Pathology|Clinic|Center|Centre|Laboratory)\s*[:\-]?\s*([A-Za-z0-9\.\s&]{3,45})"
     ]
-    for pat in hosp_patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            val = m.group(1).strip(' .:-\t\r\n')
-            if len(val) >= 3 and val.lower() not in ("hospital", "laboratory", "lab", "clinic", "pathology"):
-                demographics["hospital_name"] = val
-                break
+    for ln in lines[:10]: # Check top 10 lines of document
+        for pat in hosp_patterns:
+            m = re.search(pat, ln, re.IGNORECASE)
+            if m:
+                val = m.group(1).strip(' .:-\t\r\n')
+                if len(val) >= 4 and val.lower() not in ("hospital", "laboratory", "lab", "pathology", "clinic"):
+                    demographics["hospital_name"] = val
+                    break
+        if "hospital_name" in demographics:
+            break
 
     # 3. Doctor Name Regexes
     doc_patterns = [
-        r"(?:Ref\.?\s*By|Ref\.?\s*Doctor|Doctor|Dr\.?\s*Name|Referring Doctor|Consultant)\s*[:\-]?\s*([A-Za-z\.\s]{2,40})"
+        r"(?:Admitting\s*Doc\.?|Ref\.?\s*By|Ref\.?\s*Doctor|Doctor|Dr\.?\s*Name|Referring Doctor|Consultant)\s*[:\-]?\s*([A-Za-z\.\s]{3,35})",
+        r"(Dr\.\s*[A-Za-z\s]{3,30})"
     ]
-    for pat in doc_patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            val = m.group(1).strip(' .:-\t\r\n')
-            if len(val) >= 2 and val.lower() not in ("doctor", "ref doctor", "ref by"):
-                demographics["ref_doctor"] = val
-                break
+    for ln in lines:
+        for pat in doc_patterns:
+            m = re.search(pat, ln, re.IGNORECASE)
+            if m:
+                val = m.group(1).strip(' .:-\t\r\n')
+                val = re.sub(r"\s+(?:Approved|Reported|Collected|Bill|Ward|MD|Pathologist|MBBS|Reg|Sample|ID|Date|Time).*", "", val, flags=re.IGNORECASE).strip()
+                if len(val) >= 4 and val.lower() not in ("doctor", "ref doctor", "admitting doc"):
+                    demographics["ref_doctor"] = val
+                    break
+        if "ref_doctor" in demographics:
+            break
 
     # 4. Age / Sex Regexes
-    age_patterns = [
-        r"(?:Age\s*/\s*(?:Sex|Gender)|Age|Gender|Sex)\s*[:\-]?\s*([\d\sA-Za-z/,\.-]{2,45})"
-    ]
-    for pat in age_patterns:
-        m = re.search(pat, text, re.IGNORECASE)
+    for ln in lines:
+        m = re.search(r"(?:Age\s*/\s*(?:Sex|Gender)|Age|Gender|Sex)\s*[:\-]?\s*([^\n\r]{2,40})", ln, re.IGNORECASE)
         if m:
             val = m.group(1).strip(' .:-\t\r\n')
+            val = re.sub(r"\s+(?:Reported|Approved|Collected|Ref|Doctor|Ward|Bill|Date|Time).*", "", val, flags=re.IGNORECASE).strip()
             if len(val) >= 2:
                 demographics["age_sex"] = val
                 break

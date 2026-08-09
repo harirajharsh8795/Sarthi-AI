@@ -224,13 +224,11 @@ def retrieve_context(query: str, session_id: str | None, conversation_id: str | 
     3. Retrieves from user_docs (strictly scoped to active conversation) and knowledge_base.
     4. Filters results using exact Cosine Similarity and local .md file priority.
     """
-    # Check if the ACTIVE conversation specifically has uploaded documents
     active_conv_docs = []
     if session_id:
         if conversation_id and conversation_id != "new":
             active_conv_docs = session_manager.get_session_documents(session_id, conversation_id=conversation_id)
-        elif not conversation_id or conversation_id == "new":
-            # If conversation_id is new, fetch only the most recently uploaded document for the session
+        if not active_conv_docs:
             all_docs = session_manager.get_session_documents(session_id)
             if all_docs:
                 all_docs = sorted(all_docs, key=lambda d: d.get("uploaded_at") or "", reverse=True)
