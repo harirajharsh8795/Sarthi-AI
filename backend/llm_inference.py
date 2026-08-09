@@ -209,7 +209,11 @@ def _generate_answer_stream_inner(
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": True,
-        "keep_alive": "30m"
+        "keep_alive": "30m",
+        "options": {
+            "num_ctx": NUM_CTX,
+            "temperature": 0.2
+        }
     }
 
     full_text = ""
@@ -221,23 +225,37 @@ def _generate_answer_stream_inner(
         if response.status_code != 200:
             err_msg = response.text[:300]
             logger.warning(f"Ollama returned HTTP {response.status_code}: {err_msg}")
-            # Retry with progressively simpler prompts
+            # Retry with fallback compressed prompt and lower context window (1024) to avoid runner crashes
             for attempt in range(3):
                 wait = 2 ** attempt  # 1s, 2s, 4s
                 time.sleep(wait)
+                compact_context = compressed_chunks[0]['content'][:500] if compressed_chunks else ""
                 retry_payload = {
                     "model": MODEL_NAME,
-                    "prompt": f"Question: {query}\n\nAnswer concisely:",
+                    "prompt": f"Question: {query}\n\nRelevant Info: {compact_context}\n\nAnswer in clear Hindi/Hinglish:",
                     "stream": True,
-                    "keep_alive": "30m"
+                    "keep_alive": "30m",
+                    "options": {
+                        "num_ctx": 1024,
+                        "temperature": 0.2
+                    }
                 }
-                logger.info(f"Retry attempt {attempt + 1}/3 with simplified prompt...")
+                logger.info(f"Retry attempt {attempt + 1}/3 with compact context payload...")
                 response = requests.post(settings.OLLAMA_URL, json=retry_payload, stream=True, timeout=120)
                 if response.status_code == 200:
                     break
+            
             if response.status_code != 200:
-                raise RuntimeError(f"Ollama Error ({response.status_code}): {response.text[:200]}")
-        
+                logger.error(f"Ollama error after retries ({response.status_code}): {response.text[:200]}")
+                # Grounded fallback if Ollama runner process crashed under memory pressure
+                if compressed_chunks:
+                    fallback_text = f"**{compressed_chunks[0].get('title', 'Direct Guidance')}**\n\n{compressed_chunks[0].get('content', '')[:600]}\n\n[1]"
+                else:
+                    fallback_text = "Aapka query receive ho gaya hai. Kripya apna prashna thoda short karke poochein."
+                full_text = fallback_text
+                yield {"type": "token", "data": {"token": fallback_text}}
+                return
+
         for line in response.iter_lines():
             if line:
                 data = json.loads(line.decode('utf-8'))
@@ -267,7 +285,11 @@ def _generate_answer_stream_inner(
     except Exception as e:
         import traceback
         logger.error(f"Ollama inference failed: {e}\n{traceback.format_exc()}")
-        yield {"type": "error", "data": {"message": f"Inference error ({type(e).__name__}): {str(e)}"}}
+        if compressed_chunks and not full_text:
+            fallback_text = f"**{compressed_chunks[0].get('title', 'Knowledge Source')}**\n\n{compressed_chunks[0].get('content', '')[:600]}\n\n[1]"
+            yield {"type": "token", "data": {"token": fallback_text}}
+        else:
+            yield {"type": "error", "data": {"message": f"Inference error ({type(e).__name__}): {str(e)}"}}
         return
         
     generation_time_ms = (time.perf_counter() - start_time) * 1000

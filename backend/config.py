@@ -16,7 +16,7 @@ class Settings(BaseModel):
     # Model configuration
     OLLAMA_URL: str = "http://localhost:11434/api/generate"
     LLM_MODEL_NAME: str = "llama3.2:1b"
-    LLM_NUM_CTX: int = 4096
+    LLM_NUM_CTX: int = 2048
     EMBEDDING_MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 
     # OCR and Upload constraints
@@ -45,7 +45,7 @@ def load_settings() -> Settings:
         "LOGS_DIR": os.getenv("SAARTHI_LOGS_DIR", "./data/logs"),
         "OLLAMA_URL": os.getenv("SAARTHI_OLLAMA_URL", "http://localhost:11434/api/generate"),
         "LLM_MODEL_NAME": os.getenv("SAARTHI_LLM_MODEL_NAME", "llama3.2:1b"),
-        "LLM_NUM_CTX": int(os.getenv("SAARTHI_LLM_NUM_CTX", "4096")),
+        "LLM_NUM_CTX": int(os.getenv("SAARTHI_LLM_NUM_CTX", "2048")),
         "EMBEDDING_MODEL_NAME": os.getenv("SAARTHI_EMBEDDING_MODEL_NAME", "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"),
         "MAX_UPLOAD_SIZE": int(os.getenv("SAARTHI_MAX_UPLOAD_SIZE", str(15 * 1024 * 1024))),
         "OCR_LOW_CONFIDENCE_THRESHOLD": float(os.getenv("SAARTHI_OCR_LOW_CONFIDENCE_THRESHOLD", "50.0")),
