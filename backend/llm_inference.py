@@ -30,6 +30,28 @@ def detect_response_language(text: str) -> str:
     """Detects the language of the query using intent_service."""
     return intent_service.detect_language(text)
 
+def _build_clean_fallback_response(compressed_chunks: list) -> str:
+    """Produces clean Markdown response without raw YAML frontmatter headers if LLM process is under RAM pressure."""
+    if not compressed_chunks:
+        return "Please ask a specific question about your uploaded document or offline guidelines."
+    
+    c = compressed_chunks[0]
+    raw_title = c.get('source') or c.get('filename') or c.get('title') or 'Guidelines'
+    raw_text = c.get('text') or c.get('content') or c.get('page_content') or ''
+    
+    # Strip YAML frontmatter headers (title:, keywords:, domain:, ---)
+    clean_lines = []
+    for line in raw_text.split('\n'):
+        l_strip = line.strip()
+        if re.match(r'^(?:title|keywords|document_id|domain|topic|category|intent|language)\s*:', l_strip, re.IGNORECASE) or l_strip == '---':
+            continue
+        clean_lines.append(line)
+    
+    cleaned_body = '\n'.join(clean_lines).strip()
+    title_clean = re.sub(r'[-_]', ' ', raw_title.rsplit('.', 1)[0]).title()
+    
+    return f"### 📌 {title_clean}\n\n{cleaned_body}\n\n[1]"
+
 def generate_answer_stream(query: str, session_id: str | None, response_language: str | None = None, conversation_id: str | None = None) -> Generator[dict, None, None]:
     try:
         yield from _generate_answer_stream_inner(query, session_id, response_language, conversation_id)
@@ -231,6 +253,7 @@ def _generate_answer_stream_inner(
             "num_ctx": NUM_CTX,
             "temperature": 0.1,
             "repeat_penalty": 1.15,
+            "num_predict": 1536,
             "num_thread": 4
         }
     }
@@ -240,24 +263,24 @@ def _generate_answer_stream_inner(
     token_buffer = ""
     
     try:
-        response = requests.post(settings.OLLAMA_URL, json=payload, stream=True, timeout=120)
+        response = requests.post(settings.OLLAMA_URL, json=payload, stream=True, timeout=180)
         if response.status_code != 200:
             err_msg = response.text[:300]
             logger.warning(f"Ollama returned HTTP {response.status_code}: {err_msg}")
-            # Retry with fallback compressed prompt and lower context window (1024) to avoid runner crashes
+            # Retry with fallback compressed prompt
             for attempt in range(3):
-                wait = 2 ** attempt  # 1s, 2s, 4s
-                time.sleep(wait)
+                time.sleep(1)
                 first_c = compressed_chunks[0] if compressed_chunks else {}
                 compact_context = (first_c.get('text') or first_c.get('content') or '')[:500]
                 retry_payload = {
                     "model": MODEL_NAME,
-                    "prompt": f"Question: {query}\n\nRelevant Info: {compact_context}\n\nAnswer in clear Hindi/Hinglish:",
+                    "prompt": f"Question: {query}\n\nRelevant Info: {compact_context}\n\nAnswer:",
                     "stream": True,
                     "keep_alive": "30m",
                     "options": {
-                        "num_ctx": 1024,
-                        "temperature": 0.2
+                        "num_ctx": 1536,
+                        "temperature": 0.1,
+                        "num_predict": 1024
                     }
                 }
                 logger.info(f"Retry attempt {attempt + 1}/3 with compact context payload...")
@@ -267,56 +290,44 @@ def _generate_answer_stream_inner(
             
             if response.status_code != 200:
                 logger.error(f"Ollama error after retries ({response.status_code}): {response.text[:200]}")
-                # Grounded fallback if Ollama runner process crashed under memory pressure
-                if compressed_chunks:
-                    c = compressed_chunks[0]
-                    c_title = c.get('source') or c.get('filename') or c.get('title') or 'Government Guidelines'
-                    c_text = c.get('text') or c.get('content') or c.get('page_content') or ''
-                    fallback_text = f"**{c_title}**\n\n{c_text[:700]}\n\n[1]"
-                else:
-                    fallback_text = "Aapka query receive ho gaya hai. Kripya apna prashna thoda short karke poochein."
+                fallback_text = _build_clean_fallback_response(compressed_chunks)
                 full_text = fallback_text
                 yield {"type": "token", "data": {"token": fallback_text}}
-                return
 
-        for line in response.iter_lines():
-            if line:
-                data = json.loads(line.decode('utf-8'))
-                token = data.get("response", "")
-                full_text += token
-                total_tokens += 1
-                token_buffer += token
-                
-                # Stream in fast word/phrase chunks (>= 6 chars or space/line breaks) for instant TTFT on screen
-                if len(token_buffer) >= 6 or any(c in token_buffer for c in ['\n', '.', '!', '?', ';', ' ']):
-                    yield {
-                        "type": "token",
-                        "data": {"token": token_buffer}
-                    }
-                    token_buffer = ""
-                
-                if data.get("done", False):
-                    break
+        if response.status_code == 200:
+            for line in response.iter_lines():
+                if line:
+                    data = json.loads(line.decode('utf-8'))
+                    token = data.get("response", "")
+                    full_text += token
+                    total_tokens += 1
+                    token_buffer += token
+                    
+                    # Stream in fast word/phrase chunks (>= 6 chars or space/line breaks) for instant TTFT on screen
+                    if len(token_buffer) >= 6 or any(c in token_buffer for c in ['\n', '.', '!', '?', ';', ' ']):
+                        yield {
+                            "type": "token",
+                            "data": {"token": token_buffer}
+                        }
+                        token_buffer = ""
+                    
+                    if data.get("done", False):
+                        break
 
-        # Flush any remaining text buffer
-        if token_buffer:
-            yield {
-                "type": "token",
-                "data": {"token": token_buffer}
-            }
-            token_buffer = ""
+            # Flush any remaining text buffer
+            if token_buffer:
+                yield {
+                    "type": "token",
+                    "data": {"token": token_buffer}
+                }
+                token_buffer = ""
     except Exception as e:
         import traceback
         logger.error(f"Ollama inference failed: {e}\n{traceback.format_exc()}")
-        if compressed_chunks and not full_text:
-            c = compressed_chunks[0]
-            c_title = c.get('source') or c.get('filename') or c.get('title') or 'Government Guidelines'
-            c_text = c.get('text') or c.get('content') or c.get('page_content') or ''
-            fallback_text = f"**{c_title}**\n\n{c_text[:700]}\n\n[1]"
+        if not full_text:
+            fallback_text = _build_clean_fallback_response(compressed_chunks)
+            full_text = fallback_text
             yield {"type": "token", "data": {"token": fallback_text}}
-        else:
-            yield {"type": "error", "data": {"message": f"Inference error ({type(e).__name__}): {str(e)}"}}
-        return
         
     generation_time_ms = (time.perf_counter() - start_time) * 1000
     tokens_per_second = total_tokens / (generation_time_ms / 1000) if generation_time_ms > 0 else 0.0
