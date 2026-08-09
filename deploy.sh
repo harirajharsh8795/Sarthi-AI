@@ -71,30 +71,26 @@ else
     echo "  Response: ${WARMUP_RESULT:0:100}"
 fi
 
-# ─── 5. INSTALL FRONTEND DEPS & BUILD ───────────────────────
-if [ -d ~/Sarthi-AI/frontend/dist ] && [ -f ~/Sarthi-AI/frontend/dist/index.html ]; then
-    echo "[5/8] Frontend dist/ already exists — skipping build."
-else
-    echo "[5/8] Building production frontend..."
-    cd ~/Sarthi-AI/frontend
-    
-    # Install deps if missing
-    if [ ! -d node_modules ]; then
-        echo "  Installing npm dependencies..."
-        npm install --production=false 2>&1 | tail -3
-    fi
-    
-    # Build with reduced memory usage
-    NODE_OPTIONS="--max-old-space-size=512" npm run build 2>&1 | tail -5
-    
-    if [ -f dist/index.html ]; then
-        echo "  ✅ Frontend built successfully."
-    else
-        echo "  ❌ Frontend build failed! Check errors above."
-        exit 1
-    fi
-    cd ~/Sarthi-AI
+# ─── 5. BUILD LATEST FRONTEND BUNDLE ─────────────────────────
+echo "[5/8] Building production frontend..."
+cd ~/Sarthi-AI/frontend
+
+# Install deps if missing
+if [ ! -d node_modules ]; then
+    echo "  Installing npm dependencies..."
+    npm install --production=false 2>&1 | tail -3
 fi
+
+# Build with reduced memory usage
+NODE_OPTIONS="--max-old-space-size=512" npm run build 2>&1 | tail -5
+
+if [ -f dist/index.html ]; then
+    echo "  ✅ Frontend built successfully."
+else
+    echo "  ❌ Frontend build failed! Check errors above."
+    exit 1
+fi
+cd ~/Sarthi-AI
 
 # ─── 6. START BACKEND SERVER ────────────────────────────────
 echo "[6/8] Starting FastAPI server on port 8000..."

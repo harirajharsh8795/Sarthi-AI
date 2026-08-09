@@ -186,15 +186,33 @@ class PromptBuilder:
             context_block = "Context Information:\n"
             for idx, c in enumerate(chunks, 1):
                 raw_text = c.get('text') or c.get('content') or c.get('page_content') or ''
-                # Strip YAML frontmatter headers (Title:, Keywords:, domain:) to prevent LLM echoing raw file metadata
+                
                 clean_lines = []
                 for line in raw_text.split('\n'):
                     l_strip = line.strip()
-                    if re.match(r'^(?:title|keywords|document_id|domain|topic|category|intent|language)\s*:', l_strip, re.IGNORECASE):
+                    # 1. Skip YAML metadata headers
+                    if re.match(r'^(?:title|keywords|document_id|domain|topic|category|intent|language)\s*:', l_strip, re.IGNORECASE) or l_strip == '---':
                         continue
-                    if l_strip == '---':
-                        continue
+                    
+                    # 2. Multilingual line filtering
+                    if language == "English":
+                        if re.match(r'^\s*[-*]?\s*\*\*(?:Hindi|Hinglish)\*\*\s*:', l_strip, re.IGNORECASE):
+                            continue
+                        dev_chars = len(re.findall(r'[\u0900-\u097f]', l_strip))
+                        if len(l_strip) > 5 and (dev_chars / len(l_strip)) > 0.25:
+                            continue
+                    elif language == "Hindi":
+                        if re.match(r'^\s*[-*]?\s*\*\*(?:English|Hinglish)\*\*\s*:', l_strip, re.IGNORECASE):
+                            continue
+                    elif language == "Hinglish":
+                        if re.match(r'^\s*[-*]?\s*\*\*(?:Hindi)\*\*\s*:', l_strip, re.IGNORECASE):
+                            continue
+                        dev_chars = len(re.findall(r'[\u0900-\u097f]', l_strip))
+                        if len(l_strip) > 5 and (dev_chars / len(l_strip)) > 0.25:
+                            continue
+
                     clean_lines.append(line)
+                    
                 cleaned_text = '\n'.join(clean_lines).strip()
                 context_block += f"Fact [{idx}]: {cleaned_text}\n\n"
         else:

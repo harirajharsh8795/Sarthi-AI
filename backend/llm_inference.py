@@ -89,15 +89,22 @@ def _generate_answer_stream_inner(
     domain = classification["domain"]
     intent = classification["intent"]
     
-    # Priority: If query contains Devanagari script (e.g. 'प्रधानमंत्री किसान...'), FORCE Hindi Devanagari.
-    # Otherwise, if UI toggle override is provided and query is generic English/mixed, use response_language.
+    # Language Selection Priority:
+    # 1. Devanagari script in query -> FORCE Hindi.
+    # 2. Query detected as Hinglish -> FORCE Hinglish.
+    # 3. Query detected as English (pure ASCII/English words) -> FORCE English so English questions ALWAYS get English answers.
+    # 4. Fallback to response_language UI toggle.
+    detected_lang = intent_service.detect_language(query)
     if re.search(r'[\u0900-\u097f]', query):
         lang = "Hindi"
-    elif response_language and response_language in ["Hindi", "Hinglish", "English"]:
-        if classification["language"] == "English":
-            lang = response_language
-        else:
-            lang = classification["language"]
+    elif detected_lang == "Hinglish":
+        lang = "Hinglish"
+    elif detected_lang == "English":
+        lang = "English"
+    elif response_language and response_language in ["English", "Hindi", "Hinglish"]:
+        lang = response_language
+    else:
+        lang = classification.get("language", "English")
     
     # 2. Query Rewriting
     history = []
