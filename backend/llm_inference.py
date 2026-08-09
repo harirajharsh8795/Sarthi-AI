@@ -86,6 +86,8 @@ def _generate_answer_stream_inner(
 
     classification = intent_service.classify_query(query)
     lang = classification["language"]
+    domain = classification["domain"]
+    intent = classification["intent"]
     
     # Priority: If query contains Devanagari script (e.g. 'प्रधानमंत्री किसान...'), FORCE Hindi Devanagari.
     # Otherwise, if UI toggle override is provided and query is generic English/mixed, use response_language.
